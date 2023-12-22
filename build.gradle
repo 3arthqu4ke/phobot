@@ -167,13 +167,11 @@ subprojects {
 
 	shadowJar {
 		configurations = [project.configurations.jarLibs]
-		classifier 'dev-shadow'
 	}
 
 	remapJar {
 		inputFile.set shadowJar.archiveFile
 		dependsOn shadowJar
-		classifier null
 	}
 }
 
