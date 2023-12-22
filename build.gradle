@@ -22,6 +22,11 @@ allprojects {
 		mixin.defaultRefmapName = 'mixins.phobot.refmap.json'
 	}
 
+	/* TODO: java {
+		withSourcesJar()
+		withJavadocJar()
+	}*/
+
 	repositories {
 		mavenCentral()
 		maven {

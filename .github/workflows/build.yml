@@ -21,11 +21,12 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build sources jar
-        run: ./gradlew sourcesJar
+      # TODO: build sources and javadocJar like in PB
+      #- name: Build sources jar
+      #  run: ./gradlew sourcesJar
 
-      - name: Build javadoc jar
-        run: ./gradlew javadocJar
+      #- name: Build javadoc jar
+      #  run: ./gradlew javadocJar
 
       - name: Build jars
         run: ./gradlew build
