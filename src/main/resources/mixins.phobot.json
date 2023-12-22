@@ -1,0 +1,50 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "me.earth.phobot.mixins",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "mixins.phobot.refmap.json",
+  "mixins": [
+    "IMinecraft",
+    "IVoxelShape",
+    "MixinMinecraft",
+    "MixinOptions",
+    "entity.ILivingEntity",
+    "entity.MixinAbstractClientPlayer",
+    "entity.MixinEntity",
+    "entity.MixinInventory",
+    "entity.MixinLivingEntity",
+    "entity.MixinLocalPlayer",
+    "entity.MixinSyncedEntityData",
+    "level.IClientLevel",
+    "level.IEntitySectionStorage",
+    "level.ILevelEntityGetterAdapter",
+    "level.MixinClientChunkCache",
+    "level.MixinLevelChunk",
+    "network.IClientboundSectionBlocksUpdatePacket",
+    "network.IMultiPlayerGameMode",
+    "network.IServerboundContainerClosePacket",
+    "network.IServerboundHelloPacket",
+    "network.MixinClientHandshakePacketListenerImpl",
+    "network.MixinClientPacketListener",
+    "network.MixinConnection",
+    "network.MixinMultiPlayerGameMode",
+    "network.MixinPacketEncoder",
+    "network.MixinServerboundInteractPacket",
+    "network.MixinServerboundSwingPacket",
+    "render.MixinEntityRenderDispatcher",
+    "render.MixinLevelRenderer",
+    "screen.IDisconnectScreen",
+    "screen.MixinAbstractContainerScreen",
+    "screen.MixinConnectScreen",
+    "screen.MixinTitleScreen"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "client": [
+    "entity.ILocalPlayer",
+    "level.MixinClientLevel",
+    "render.MixinLivingEntityRenderer"
+  ]
+}

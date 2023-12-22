@@ -1,0 +1,221 @@
+{
+  "AccountSpoof": {
+    "Enabled": true
+  },
+  "AntiCheat": {
+    "Enabled": false,
+    "Actions": 8,
+    "Raytrace": "None",
+    "MaxBuildHeight": 100,
+    "InventoryDelay": 75,
+    "Updates": 1,
+    "LagBackThreshold": 3.0,
+    "CC": true
+  },
+  "AutoCrystal": {
+    "Enabled": false,
+    "MinDamage": 6.0,
+    "PlaceDelay": 10,
+    "BreakDelay": 10,
+    "InstantPlace": 0,
+    "PollDelay": 100,
+    "BlockUpdateDelay": 0,
+    "RemoveDelay": 0,
+    "MultiPlace": 1,
+    "MultiThreading": false,
+    "ReplaceTime": 30,
+    "ReplaceBreaking": false,
+    "MaxDeathTime": 45,
+    "DTimeFactor": 1.0,
+    "DamageFactor": 2.0
+  },
+  "AutoEat": {
+    "Enabled": true,
+    "Ticks": 2
+  },
+  "AutoKit": {
+    "Enabled": false,
+    "Kit": "3arthqu4ke"
+  },
+  "AutoMine": {
+    "Enabled": false
+  },
+  "AutoRespawn": {
+    "Enabled": false
+  },
+  "AutoTotem": {
+    "Enabled": false,
+    "InvincibilityFrames": false
+  },
+  "AutoTrap": {
+    "Enabled": false,
+    "Delay": 30,
+    "NoGlitchBlocks": false,
+    "Helping": 3
+  },
+  "Bomber": {
+    "Enabled": false
+  },
+  "Criticals": {
+    "Enabled": false
+  },
+  "Debug": {
+    "Enabled": false,
+    "Break": false,
+    "Prediction": false
+  },
+  "FakePlayer": {
+    "Enabled": false
+  },
+  "Fullbright": {
+    "Enabled": false
+  },
+  "HitboxDesync": {
+    "Enabled": false
+  },
+  "Holes": {
+    "Enabled": false,
+    "Async": true,
+    "MaxHeight": 60,
+    "MinHeight": 0,
+    "Render": false,
+    "Range": 6.0,
+    "Holes": 10
+  },
+  "KillAura": {
+    "Enabled": false,
+    "Teleport": true,
+    "Weapon": true,
+    "Players": true,
+    "Entities": true,
+    "Others": false
+  },
+  "Logger": {
+    "Enabled": false,
+    "Incoming": true,
+    "Outgoing": true,
+    "Info": true,
+    "Chat": false,
+    "StackTrace": false,
+    "Buffer": false,
+    "LineCap": 50,
+    "Total": true,
+    "Filter": "Off",
+    "Packets": {
+      "values": [
+        "ServerboundKeepAlivePacket",
+        "ServerboundResourcePackPacket",
+        "ServerboundPongPacket"
+      ]
+    }
+  },
+  "NoInterp": {
+    "Enabled": false
+  },
+  "NoRender": {
+    "Enabled": false,
+    "Fire": true,
+    "Totems": true,
+    "Blocks": true,
+    "Skylight": true,
+    "Liquids": true,
+    "Hurtcam": true,
+    "Bob": true,
+    "Fov": true,
+    "Explosions": true,
+    "Particles": false
+  },
+  "NoSlowDown": {
+    "Enabled": false
+  },
+  "Pathfinding": {
+    "Enabled": false,
+    "Async": true,
+    "MaxHeight": 140,
+    "MinHeight": 0,
+    "Render": false,
+    "Debug": false
+  },
+  "Potions": {
+    "Enabled": false,
+    "GoldenApples": true
+  },
+  "Replenish": {
+    "Enabled": false,
+    "Threshold": 8
+  },
+  "Rotate": {
+    "Enabled": false
+  },
+  "Scaffold": {
+    "Enabled": false,
+    "NoGlitchBlocks": false,
+    "Down": true,
+    "Clutch": 0
+  },
+  "SelfTrap": {
+    "Enabled": false,
+    "Delay": 30,
+    "NoGlitchBlocks": false,
+    "Helping": 3
+  },
+  "Speed": {
+    "Enabled": false
+  },
+  "Speedmine": {
+    "Enabled": true,
+    "Fast": true,
+    "Switch": true,
+    "NoGlitchBlocks": false
+  },
+  "Sprint": {
+    "Enabled": false
+  },
+  "Step": {
+    "Enabled": false
+  },
+  "Stop": {
+    "Enabled": false
+  },
+  "Suicide": {
+    "Enabled": false,
+    "Command": false,
+    "Armor": true,
+    "MinDamage": 6.0,
+    "PlaceDelay": 10,
+    "BreakDelay": 50,
+    "InstantPlace": 0,
+    "PollDelay": 100,
+    "BlockUpdateDelay": 0,
+    "RemoveDelay": 0,
+    "MultiPlace": 1,
+    "MultiThreading": false,
+    "ReplaceTime": 30,
+    "ReplaceBreaking": false,
+    "MaxDeathTime": 45,
+    "DTimeFactor": 1.0,
+    "DamageFactor": 2.0
+  },
+  "Surround": {
+    "Enabled": false,
+    "Delay": 30,
+    "NoGlitchBlocks": true,
+    "Disable": true,
+    "AntiFacePlace": false
+  },
+  "Timer": {
+    "Enabled": false,
+    "Factor": 1.0888,
+    "Lag": 1000
+  },
+  "Velocity": {
+    "Enabled": true,
+    "Blocks": true,
+    "Entities": true
+  },
+  "XCarry": {
+    "Enabled": false,
+    "Move": false,
+    "AllowSwapWhileDragging": true
+  }
+}

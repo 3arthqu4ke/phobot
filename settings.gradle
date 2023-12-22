@@ -1,0 +1,23 @@
+pluginManagement {
+    repositories {
+        maven {
+            name 'ArchitecturyMaven'
+            url "https://maven.architectury.dev/"
+        }
+        maven {
+            name 'FabricMaven'
+            url = 'https://maven.fabricmc.net/'
+        }
+        maven {
+            name = 'ForgeMaven'
+            url = 'https://files.minecraftforge.net/maven'
+        }
+
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'phobot'
+include("fabric")
+include("forge")

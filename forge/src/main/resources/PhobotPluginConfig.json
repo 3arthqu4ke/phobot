@@ -1,0 +1,8 @@
+{
+  "name": "Phobot",
+  "mixinConfig": "mixins.phobot.json",
+  "mainClass": "me.earth.phobot.PhobotPlugin",
+  "description": "A Minecraft PvP bot.",
+  "mixinConnector": "me.earth.phobot.asm.PhobotPreLaunchPlugin",
+  "platforms": [{"name": "forge"}]
+}

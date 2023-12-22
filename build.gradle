@@ -1,0 +1,236 @@
+plugins {
+	id 'dev.architectury.loom' version '1.1.324' apply false
+	id 'com.github.johnrengelman.shadow' version '7.0.0' apply false
+	id 'architectury-plugin' version '3.4.145' apply false
+}
+
+allprojects {
+	apply plugin: 'java'
+	apply plugin: 'java-library'
+	apply plugin: 'architectury-plugin'
+	apply plugin: 'dev.architectury.loom'
+	apply plugin: 'maven-publish'
+
+	archivesBaseName  = 'phobot'
+	version = "$rootProject.mc_version-$rootProject.project_version"
+	group = 'me.earth.phobot'
+
+	sourceCompatibility = targetCompatibility = JavaVersion.VERSION_17
+
+	loom {
+		silentMojangMappingsLicense()
+		mixin.defaultRefmapName = 'mixins.phobot.refmap.json'
+	}
+
+	repositories {
+		mavenCentral()
+		maven {
+			name = '3arthMaven'
+			url = 'https://3arthqu4ke.github.io/maven'
+		}
+
+		/*maven {
+			name 'local'
+			url project.rootDir.toURI().toURL().toString() + '/libs'
+		}
+
+		maven {
+			name 'PingBypassSuperDirMaven'
+			url project.rootDir.parentFile.toURI().toURL().toString() + '/pingbypass/build/maven'
+		}*/
+
+		maven {
+			name = "ParchmentmcMaven"
+			url = "https://maven.parchmentmc.net/"
+		}
+	}
+
+	configurations {
+		lwjglAgent.extendsFrom runtimeOnly
+	}
+
+	dependencies {
+		minecraft "com.mojang:minecraft:${rootProject.mc_version}"
+		mappings loom.officialMojangMappings()
+
+		compileOnly 'org.spongepowered:mixin:0.8.5'
+
+		api ("me.earth.pingbypass:pb-api:$rootProject.pb_version") {
+			exclude module: 'gson'
+		}
+
+		api ("me.earth.pingbypass:pb-commons:$rootProject.pb_version") {
+			exclude module: 'gson'
+		}
+
+		if (rootProject.property('hmc.lwjgl').toBoolean()) {
+			lwjglAgent "me.earth.headlessmc:headlessmc-lwjgl:1.8.0"
+		}
+
+		// ugly hacks! essentially forge runClient needs this to find mixins.pingbypass_client.json
+		if (rootProject.enable_forge_runs == 'true' && System.getenv('DEPLOY_TO_GITHUB_PACKAGES_URL') == null) {
+			if (rootProject.use_pb_client == 'true') {
+				api ("me.earth.pingbypass:pb-client:$rootProject.pb_version") {
+					exclude module: 'gson'
+				}
+			}
+
+			if (rootProject.use_pb_server == 'true') {
+				api ("me.earth.pingbypass:pb-server:$rootProject.pb_version") {
+					exclude module: 'gson'
+				}
+			}
+		}
+
+		compileOnly 'org.jetbrains:annotations:24.0.1'
+		compileOnly group: 'org.ow2.asm', name: 'asm-tree', version: '9.5'
+
+		compileOnly 'org.projectlombok:lombok:1.18.26'
+		annotationProcessor 'org.projectlombok:lombok:1.18.26'
+
+		testCompileOnly 'org.projectlombok:lombok:1.18.26'
+		testAnnotationProcessor 'org.projectlombok:lombok:1.18.26'
+
+		testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
+		testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
+	}
+
+	test {
+		useJUnitPlatform()
+	}
+
+	tasks.withType(JavaCompile).configureEach {
+		it.options.encoding = "UTF-8"
+		if (JavaVersion.current().isJava9Compatible()) {
+			it.options.release.set(17)
+		}
+	}
+
+	jar {
+		from("LICENSE") {
+			rename { "${it}_${project.archivesBaseName}"}
+		}
+
+		manifest {
+			attributes(
+				'PingBypassPluginConfig': 'PhobotPluginConfig.json',
+				'Implementation-Title': 'Phobot',
+				'Implementation-Version': project.version,
+			)
+		}
+	}
+}
+
+architectury {
+	injectInjectables = false
+	common('forge', 'fabric')
+}
+
+subprojects {
+	apply plugin: 'com.github.johnrengelman.shadow'
+
+	archivesBaseName  = "phobot-$project.name"
+
+	configurations {
+		jarLibs
+	}
+
+	afterEvaluate {
+		runClient {
+			doFirst {
+				checkThatClientOrServerAreOnClasspath()
+				if (project.name == 'forge' && rootProject.enable_forge_runs != 'true') {
+					throw new IllegalStateException('Property enable_forge_runs is not true, cannot run forge')
+				}
+			}
+
+			// TODO: there are ways to use javaagents from dependencies
+			systemProperties['pb.classpath.plugins'] = 'PhobotPluginConfig.json'
+			if (rootProject.property('hmc.lwjgl').toBoolean()) {
+				jvmArgs += ["-javaagent:${configurations.lwjglAgent.files.iterator().next()}"]
+				systemProperties['joml.nounsafe'] = 'true'
+				systemProperties['fabric.systemLibraries'] = "${configurations.lwjglAgent.files.iterator().next()}"
+			}
+		}
+	}
+
+	tasks.register('runClientWithoutDependencies') {
+		doLast {
+			runClient.exec()
+		}
+	}
+
+	shadowJar {
+		configurations = [project.configurations.jarLibs]
+		classifier 'dev-shadow'
+	}
+
+	remapJar {
+		inputFile.set shadowJar.archiveFile
+		dependsOn shadowJar
+		classifier null
+	}
+}
+
+allprojects {
+	publishing {
+		publications {
+			"${project.name.toLowerCase()}"(MavenPublication) {
+				((MavenPublication) it).groupId "${project.group}"
+				((MavenPublication) it).artifactId "${project.archivesBaseName.toLowerCase()}"
+				((MavenPublication) it).version "${project.version}"
+				from components.java
+			}
+		}
+
+		repositories {
+			if (System.getenv('DEPLOY_TO_GITHUB_PACKAGES_URL') == null) {
+				maven {
+					name = 'BuildDirMaven'
+					url = rootProject.layout.buildDirectory.dir('maven')
+				}
+			} else {
+				maven {
+					name = 'GithubPagesMaven'
+					url = System.getenv('DEPLOY_TO_GITHUB_PACKAGES_URL')
+					credentials {
+						username = System.getenv('GITHUB_USER')
+						password = System.getenv('GITHUB_TOKEN')
+					}
+				}
+			}
+		}
+	}
+
+	publish {
+		dependsOn(build)
+	}
+}
+
+tasks.register('runClientFabric') {
+	description = 'Runs Phobot on Fabric'
+	group = 'run'
+	dependsOn(project(':fabric')['build'])
+	finalizedBy(project(':fabric')['runClient'])
+}
+
+tasks.register('runClientForge') {
+	description = 'Runs Phobot on Forge'
+	group = 'run'
+	dependsOn(project(':forge')['build'])
+	finalizedBy(project(':forge')['runClient'])
+}
+
+def checkThatClientOrServerAreOnClasspath() {
+	if (rootProject.use_pb_client != 'true' && rootProject.use_pb_server != 'true') {
+		project.logger.log(LogLevel.ERROR, '---------------------------------------------------------------------------------------')
+		project.logger.log(LogLevel.ERROR, 'WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING')
+		project.logger.log(LogLevel.ERROR, '---------------------------------------------------------------------------------------')
+		project.logger.log(LogLevel.ERROR, '')
+		project.logger.log(LogLevel.ERROR, 'Both properties use_pb_client and use_pb_server are false, phobot will not be loaded!')
+		project.logger.log(LogLevel.ERROR, '')
+		project.logger.log(LogLevel.ERROR, '---------------------------------------------------------------------------------------')
+		project.logger.log(LogLevel.ERROR, 'WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING')
+		project.logger.log(LogLevel.ERROR, '---------------------------------------------------------------------------------------')
+	}
+}

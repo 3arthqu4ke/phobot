@@ -1,0 +1,39 @@
+architectury {
+    platformSetupLoomIde()
+    forge()
+}
+
+loom {
+    forge {
+        mixinConfig 'mixins.phobot.json'
+    }
+}
+
+configurations {
+    compileClasspath.extendsFrom common
+    runtimeClasspath.extendsFrom common
+    developmentForge.extendsFrom common
+}
+
+dependencies {
+    if (rootProject.enable_forge_runs == 'true' && System.getenv('DEPLOY_TO_GITHUB_PACKAGES_URL') == null) {
+        if (rootProject.use_pb_client == 'true') {
+            // this has to be api, or mixins.pingbypass_client.json does not get found
+            api ("me.earth.pingbypass:pb-client-forge:$rootProject.pb_version") {
+                exclude module: 'gson'
+            }
+        }
+
+        if (rootProject.use_pb_server == 'true') {
+            // this has to be api, or mixins.pingbypass_server.json does not get found
+            api ("me.earth.pingbypass:pb-server-forge:$rootProject.pb_version") {
+                exclude module: 'gson'
+            }
+        }
+    }
+
+    forge "net.minecraftforge:forge:$rootProject.mc_version-$rootProject.forge_version"
+    // basically forge runClient is a bit annoying and strict with which module can export to what
+    common (project(path: ':', configuration: 'namedElements'))
+    jarLibs(project(path: ':', configuration: 'transformProductionForge'))
+}
