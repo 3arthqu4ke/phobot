@@ -30,7 +30,9 @@ public class BlockDestructionService extends SubscriberImpl {
         listen(new ReceiveListener.Scheduled.Safe<ClientboundBlockDestructionPacket>(mc) {
             @Override
             public void onSafeEvent(PacketEvent.Receive<ClientboundBlockDestructionPacket> event, LocalPlayer self, ClientLevel level, MultiPlayerGameMode gameMode) {
-                if (!level.getBlockState(event.getPacket().getPos()).isAir()) {
+                BlockPos p = event.getPacket().getPos();
+                if (!level.getBlockState(p).isAir()
+                        && !isUnbreakable(p, level)) { // should prevent rendering bedrock??
                     addProgress(event.getPacket().getPos(), level);
                 }
             }
@@ -71,6 +73,11 @@ public class BlockDestructionService extends SubscriberImpl {
             players.removeIf(player -> player.isRemoved() || player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) >= 7.0 * 7.0);
             return players.isEmpty();
         }
+    }
+
+    private boolean isUnbreakable(BlockPos pos, Level level) {
+        Block block = level.getBlockState(pos).getBlock();
+        return block == Blocks.BEDROCK || block == Blocks.END_PORTAL_FRAME || block == Blocks.BARRIER; // why is there no check for that?
     }
 
 }
