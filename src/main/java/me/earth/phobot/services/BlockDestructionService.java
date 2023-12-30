@@ -31,9 +31,9 @@ public class BlockDestructionService extends SubscriberImpl {
             @Override
             public void onSafeEvent(PacketEvent.Receive<ClientboundBlockDestructionPacket> event, LocalPlayer self, ClientLevel level, MultiPlayerGameMode gameMode) {
                 BlockPos p = event.getPacket().getPos();
-                if (!level.getBlockState(p).isAir()
-                        && !isUnbreakable(p, level)) { // should prevent rendering bedrock??
-                    addProgress(event.getPacket().getPos(), level);
+                if (canRecord(p, level)) { // should prevent rendering bedrock??
+                    addProgress(p, level);
+                    PingBypassApi.getEventBus().post(new FriendStartBlockMineEvent(p));
                 }
             }
         });
@@ -75,9 +75,9 @@ public class BlockDestructionService extends SubscriberImpl {
         }
     }
 
-    private boolean isUnbreakable(BlockPos pos, Level level) {
-        Block block = level.getBlockState(pos).getBlock();
-        return block == Blocks.BEDROCK || block == Blocks.END_PORTAL_FRAME || block == Blocks.BARRIER; // why is there no check for that?
+    private boolean canRecord(BlockPos pos, Level level) {
+        BlockState state = level.getBlockState(pos);
+        return state.getDestroySpeed(level, pos) < 0 && !state.isAir();
     }
 
 }
