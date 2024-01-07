@@ -30,8 +30,9 @@ public class BlockDestructionService extends SubscriberImpl {
         listen(new ReceiveListener.Scheduled.Safe<ClientboundBlockDestructionPacket>(mc) {
             @Override
             public void onSafeEvent(PacketEvent.Receive<ClientboundBlockDestructionPacket> event, LocalPlayer self, ClientLevel level, MultiPlayerGameMode gameMode) {
-                if (!level.getBlockState(event.getPacket().getPos()).isAir()) {
-                    addProgress(event.getPacket().getPos(), level);
+                BlockPos p = event.getPacket().getPos();
+                if (canRecord(p, level)) { // should prevent rendering bedrock??
+                    addProgress(p, level);
                 }
             }
         });
@@ -71,6 +72,11 @@ public class BlockDestructionService extends SubscriberImpl {
             players.removeIf(player -> player.isRemoved() || player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) >= 7.0 * 7.0);
             return players.isEmpty();
         }
+    }
+
+    private boolean canRecord(BlockPos pos, Level level) {
+        BlockState state = level.getBlockState(pos);
+        return state.getDestroySpeed(level, pos) > 0 && !state.isAir();
     }
 
 }
