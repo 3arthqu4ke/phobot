@@ -74,7 +74,7 @@ public class BlockDestructionService extends SubscriberImpl {
         }
     }
 
-    private boolean canRecord(BlockPos pos, Level level) {
+    private boolean canRecord(BlockPos pos, ClientLevel level) {
         BlockState state = level.getBlockState(pos);
         return state.getDestroySpeed(level, pos) > 0 && !state.isAir();
     }
