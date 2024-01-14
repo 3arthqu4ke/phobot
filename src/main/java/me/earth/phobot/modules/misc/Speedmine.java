@@ -60,6 +60,10 @@ import java.util.Objects;
 // TODO: make the rendering a bit smarter
 @Slf4j
 public class Speedmine extends PhobotModule {
+    private final Setting<Mode> mode = constant("Mode", Mode.Fast, "Mode to use: " +
+            "\n -Normal: Normal speedmine. " +
+            "\n -Fast: Mine blocks quicker if you place them on the same position. " +
+            "\n -Instant: Breaks blocks instantly.");
     private final Setting<Boolean> fast = bool("Fast", true, "Allows you mine blocks quicker if you place them on the same position.");
     private final Setting<Boolean> silentSwitch = bool("Switch", true, "Silently switches to your tool to mine.");
     private final Setting<Boolean> noGlitchBlocks = bool("NoGlitchBlocks", false, "If off sets the block to air on the clientside immediately.");
@@ -76,6 +80,11 @@ public class Speedmine extends PhobotModule {
     private int renderTicks = 0;
     private boolean sendAbortNextTick = true;
     private boolean expectingAir;
+    private enum Mode {
+        Normal,
+        Fast,
+        Instant
+    }
 
     public Speedmine(Phobot phobot) {
         super(phobot, "Speedmine", Categories.MISC, "Better mining.");
@@ -145,7 +154,7 @@ public class Speedmine extends PhobotModule {
         listen(new Listener<RenderEvent>() {
             @Override
             public void onEvent(RenderEvent event) {
-                if (currentPos != null && !currentState.isAir()) {
+                if (currentPos != null && (!currentState.isAir() || mode.getValue() == Mode.Instant)) {
                     for (AABB bb : renderBBs) {
                         event.getAabb().set(bb);
                         event.getAabb().move(currentPos.getX(), currentPos.getY(), currentPos.getZ());
@@ -242,7 +251,7 @@ public class Speedmine extends PhobotModule {
         currentState = level.getBlockState(currentPos);
         renderBBs = currentState.getShape(level, currentPos).toAabbs();
         if (canMine(currentPos, currentState, player, level)) {
-            if (sendAbortNextTick && fast.getValue()) {
+            if (sendAbortNextTick && mode.getValue() == Mode.Fast) {
                 player.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK, currentPos, currentDirection));
                 sendAbortNextTick = false;
             }
@@ -412,16 +421,18 @@ public class Speedmine extends PhobotModule {
             expectingAir = true;
             player.connection.send(Swing.uncancellable(InteractionHand.MAIN_HAND));
             player.swing(InteractionHand.MAIN_HAND, false);
-            if (fast.getValue()) {
-                player.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK, currentPos.relative(currentDirection), currentDirection.getOpposite()));
-                player.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, currentPos, currentDirection));
-                player.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, currentPos, currentDirection));
-                timer.reset();
-                renderDamageDelta = 0.0f;
-                renderTicks = 0;
-                sendAbortNextTick = false;
-            } else {
-                reset();
+            switch (mode.getValue()) {
+                case Normal -> reset();
+                case Fast -> {
+                    player.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK, currentPos.relative(currentDirection), currentDirection.getOpposite()));
+                    player.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, currentPos, currentDirection));
+                    player.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, currentPos, currentDirection));
+                    timer.reset();
+                    renderDamageDelta = 0.0f;
+                    renderTicks = 0;
+                    sendAbortNextTick = false;
+                }
+                case Instant -> player.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, currentPos, currentDirection));
             }
         }
     }
