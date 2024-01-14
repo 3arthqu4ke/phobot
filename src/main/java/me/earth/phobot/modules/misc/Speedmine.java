@@ -64,7 +64,6 @@ public class Speedmine extends PhobotModule {
             "\n -Normal: Normal speedmine. " +
             "\n -Fast: Mine blocks quicker if you place them on the same position. " +
             "\n -Instant: Breaks blocks instantly.");
-    private final Setting<Boolean> fast = bool("Fast", true, "Allows you mine blocks quicker if you place them on the same position.");
     private final Setting<Boolean> silentSwitch = bool("Switch", true, "Silently switches to your tool to mine.");
     private final Setting<Boolean> noGlitchBlocks = bool("NoGlitchBlocks", false, "If off sets the block to air on the clientside immediately.");
     private final Setting<Boolean> swing = bool("Swing", false, "Swings every tick.");
