@@ -1,22 +1,25 @@
 package me.earth.phobot.util.world;
 
+import com.google.gson.internal.UnsafeAllocator;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.mixins.level.IClientLevel;
-import me.earth.phobot.util.player.FakePlayer;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.multiplayer.ClientChunkCache;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.multiplayer.CommonListenerCookie;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.DimensionSpecialEffects;
 import net.minecraft.core.*;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.sounds.SoundEvent;
@@ -26,6 +29,7 @@ import net.minecraft.util.profiling.InactiveProfiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.TickRateManager;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageSources;
 import net.minecraft.world.entity.Entity;
@@ -61,7 +65,6 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.ticks.LevelTickAccess;
 import net.minecraft.world.ticks.TickPriority;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -87,6 +90,7 @@ public abstract class DelegatingClientLevel extends ClientLevel implements Level
         this(level, getClientPacketListener(level));
     }
 
+    @SuppressWarnings("DataFlowIssue") // passing LevelRenderer as null is not a problem!
     private DelegatingClientLevel(ClientLevel level, ClientPacketListener connection) {
         super(connection, level.getLevelData(), level.dimension(), level.dimensionTypeRegistration(), 0, level.getServerSimulationDistance(), () -> InactiveProfiler.INSTANCE, null, level.isDebug(), 0);
         this.level = level;
@@ -128,12 +132,6 @@ public abstract class DelegatingClientLevel extends ClientLevel implements Level
     public ProfilerFiller getProfiler() {
         return InactiveProfiler.INSTANCE;
     }
-
-    // We already copy the correct DimensionType from the given Level
-    // public DimensionType dimensionType()
-
-    // We do not override registryAccess as we already pass a valid registry access up
-    // public RegistryAccess registryAccess()
 
     @Override
     public void updateSkyBrightness() {
@@ -254,13 +252,39 @@ public abstract class DelegatingClientLevel extends ClientLevel implements Level
     }
 
     @Override
-    public void addPlayer(int i, AbstractClientPlayer abstractClientPlayer) {
-        level.addPlayer(i, abstractClientPlayer);
+    public void addEntity(Entity entity) {
+        level.addEntity(entity);
     }
 
     @Override
-    public void putNonPlayerEntity(int i, Entity entity) {
-        level.putNonPlayerEntity(i, entity);
+    public void playLocalSound(Entity entity, SoundEvent soundEvent, SoundSource soundSource, float f, float g) {
+        level.playLocalSound(entity, soundEvent, soundSource, f, g);
+    }
+
+    @Override
+    public void playSound(@Nullable Player player, double d, double e, double f, SoundEvent soundEvent, SoundSource soundSource) {
+        level.playSound(player, d, e, f, soundEvent, soundSource);
+    }
+
+    @Override
+    public Explosion explode(@Nullable Entity entity, @Nullable DamageSource damageSource, @Nullable ExplosionDamageCalculator explosionDamageCalculator, double d, double e, double f, float g, boolean bl, ExplosionInteraction explosionInteraction, ParticleOptions particleOptions, ParticleOptions particleOptions2, SoundEvent soundEvent) {
+        return level.explode(entity, damageSource, explosionDamageCalculator, d, e, f, g, bl, explosionInteraction, particleOptions, particleOptions2, soundEvent);
+    }
+
+    @Override
+    public Explosion explode(@Nullable Entity entity, @Nullable DamageSource damageSource, @Nullable ExplosionDamageCalculator explosionDamageCalculator, double d, double e, double f, float g, boolean bl, ExplosionInteraction explosionInteraction, boolean bl2, ParticleOptions particleOptions, ParticleOptions particleOptions2, SoundEvent soundEvent) {
+        return level.explode(entity, damageSource, explosionDamageCalculator, d, e, f, g, bl, explosionInteraction, bl2, particleOptions, particleOptions2, soundEvent);
+    }
+
+    // We already copy the correct DimensionType from the given Level
+    // public DimensionType dimensionType()
+
+    // We do not override registryAccess as we already pass a valid registry access up
+    // public RegistryAccess registryAccess()
+
+    @Override
+    public TickRateManager tickRateManager() {
+        return level.tickRateManager();
     }
 
     @Override
@@ -703,8 +727,8 @@ public abstract class DelegatingClientLevel extends ClientLevel implements Level
     }
 
     @Override
-    public Explosion explode(@Nullable Entity entity, @Nullable DamageSource damageSource, @Nullable ExplosionDamageCalculator explosionDamageCalculator, double d, double e, double f, float g, boolean bl, ExplosionInteraction explosionInteraction, boolean bl2) {
-        return level.explode(entity, damageSource, explosionDamageCalculator, d, e, f, g, bl, explosionInteraction, bl2);
+    public boolean noBlockCollision(@Nullable Entity entity, AABB aABB) {
+        return level.noBlockCollision(entity, aABB);
     }
 
     @Nullable
@@ -1406,21 +1430,46 @@ public abstract class DelegatingClientLevel extends ClientLevel implements Level
         }
 
         log.error("IClientLevel duck not applied to " + level + ", if in a Unit Test ignore this message.");
-        return new DummyClientPacketListener(level.registryAccess());
+        return DummyClientPacketListener.create(level.registryAccess());
     }
 
     @VisibleForTesting
     public static final class DummyClientPacketListener extends ClientPacketListener {
-        private final RegistryAccess registryAccess;
-
-        public DummyClientPacketListener(RegistryAccess registryAccess) {
-            super(Minecraft.getInstance(), new TitleScreen(), null, null, FakePlayer.RANDOM_GAMEPROFILE, null);
-            this.registryAccess = registryAccess;
-        }
+        private RegistryAccess.Frozen registryAccess;
 
         @Override
-        public @NotNull RegistryAccess registryAccess() {
+        public RegistryAccess.Frozen registryAccess() {
             return registryAccess;
+        }
+
+        @SneakyThrows
+        public static DummyClientPacketListener create(RegistryAccess registryAccess) {
+            RegistryAccess.Frozen frozen = registryAccess instanceof RegistryAccess.Frozen alreadyFrozen
+                    ? alreadyFrozen
+                    : new RegistryAccess.Frozen() {
+                        @Override
+                        public <E> Optional<Registry<E>> registry(ResourceKey<? extends Registry<? extends E>> resourceKey) {
+                            return registryAccess.registry(resourceKey);
+                        }
+
+                        @Override
+                        public Stream<RegistryEntry<?>> registries() {
+                            return registryAccess.registries();
+                        }
+                    };
+            //noinspection ConstantValue
+            if (Minecraft.getInstance() == null) { // can happen in tests, there we need Unsafe
+                DummyClientPacketListener dummyClientPacketListener = UnsafeAllocator.INSTANCE.newInstance(DummyClientPacketListener.class);
+                dummyClientPacketListener.registryAccess = frozen;
+                return dummyClientPacketListener;
+            }
+
+            return new DummyClientPacketListener(frozen);
+        }
+
+        private DummyClientPacketListener(RegistryAccess.Frozen registryAccess) {
+            super(Minecraft.getInstance(), new Connection(PacketFlow.SERVERBOUND), new CommonListenerCookie(null, null, null, null, null, null, null));
+            this.registryAccess = registryAccess;
         }
     }
 

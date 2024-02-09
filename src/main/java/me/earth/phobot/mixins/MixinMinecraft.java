@@ -20,8 +20,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MixinMinecraft {
     @Shadow @Nullable public LocalPlayer player;
 
-    @Inject(method = "clearLevel(Lnet/minecraft/client/gui/screens/Screen;)V", at = @At("RETURN"))
-    private void clearLevelHook(Screen screen, CallbackInfo ci) {
+    @Inject(method = "clearClientLevel(Lnet/minecraft/client/gui/screens/Screen;)V", at = @At("RETURN"))
+    private void clearClientLevelHook(Screen screen, CallbackInfo ci) {
         PingBypassApi.getEventBus().post(new ChangeWorldEvent(null));
     }
 

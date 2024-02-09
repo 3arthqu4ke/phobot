@@ -4,8 +4,8 @@ WORKDIR /phobot
 COPY . /phobot
 
 RUN mkdir -p fabric/run/mods
-RUN wget -O fabric/run/mods/hmc-specifics-1.20.1.jar \
-    https://github.com/3arthqu4ke/HMC-Specifics/releases/download/v1.20.1-1.2.2/hmc-specifics-fabric-1.20.1-1.2.2.jar
+RUN wget -O fabric/run/mods/hmc-specifics-1.20.4.jar \
+    https://github.com/3arthqu4ke/hmc-specifics/releases/download/v1.20.4-1.8.1/hmc-specifics-fabric-1.20.4-1.8.1.jar
 
 RUN chmod +x gradlew
 RUN ./gradlew -Phmc.lwjgl=true :fabric:build

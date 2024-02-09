@@ -32,7 +32,7 @@ public class FakePlayerModule extends ModuleImpl {
                 fakePlayer.getInventory().setItem(i, player.getInventory().getItem(i));
             }
 
-            level.addPlayer(ID, fakePlayer);
+            level.addEntity(fakePlayer);
             fakePlayer.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 400, 1));
             fakePlayer.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 6000, 0));
             fakePlayer.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 2400, 3));

@@ -47,7 +47,7 @@ public class AccountSpoof extends ModuleImpl implements HasCustomModuleCommand {
                 var accountUUID = uuid.getValue();
                 //noinspection DataFlowIssue
                 accessor.setName(accountName);
-                accessor.setProfileId(Optional.of(accountUUID));
+                accessor.setProfileId(accountUUID);
                 IntegratedServer server = mc.getSingleplayerServer();
                 if (server != null) {
                     server.setSingleplayerProfile(new GameProfile(accountUUID, accountName));

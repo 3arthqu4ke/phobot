@@ -1,5 +1,6 @@
 package me.earth.phobot;
 
+import com.google.gson.internal.UnsafeAllocator;
 import com.mojang.serialization.Lifecycle;
 import lombok.SneakyThrows;
 import me.earth.phobot.util.world.DelegatingClientLevel;
@@ -15,7 +16,6 @@ import net.minecraft.util.profiling.InactiveProfiler;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.dimension.DimensionType;
-import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -31,21 +31,19 @@ public class TestUtil {
     }
 
     @SneakyThrows
-    public static Unsafe getUnsafe() {
-        Field field = Unsafe.class.getDeclaredField("theUnsafe");
-        field.setAccessible(true);
-        return (Unsafe) field.get(null);
+    public static <T> T allocateInstance(Class<? extends T> tClass) {
+        return UnsafeAllocator.INSTANCE.newInstance(tClass);
     }
 
     @SneakyThrows
     @SuppressWarnings("unchecked")
     public static ClientLevel createClientLevel() {
         bootstrap();
-        Holder.Reference<DimensionType> holder = Holder.Reference.createStandAlone(new HolderOwner<>(){}, (ResourceKey<DimensionType>) TestUtil.getUnsafe().allocateInstance(ResourceKey.class));
+        Holder.Reference<DimensionType> holder = Holder.Reference.createStandAlone(new HolderOwner<>(){}, allocateInstance(ResourceKey.class));
         Field value = Holder.Reference.class.getDeclaredField("value");
         value.setAccessible(true);
         value.set(holder, getDimensionTypes().get(0));
-        ResourceKey<Level> resourceKey = (ResourceKey<Level>) TestUtil.getUnsafe().allocateInstance(ResourceKey.class);
+        ResourceKey<Level> resourceKey = allocateInstance(ResourceKey.class);
         RegistryAccess registryAccess = new RegistryAccess() {
             @Override
             public <E> Optional<Registry<E>> registry(ResourceKey<? extends Registry<? extends E>> resourceKey) {
@@ -58,7 +56,8 @@ public class TestUtil {
             }
         };
 
-        return new ClientLevel(new DelegatingClientLevel.DummyClientPacketListener(registryAccess),
+        //noinspection DataFlowIssue
+        return new ClientLevel(DelegatingClientLevel.DummyClientPacketListener.create(registryAccess),
                 new ClientLevel.ClientLevelData(Difficulty.EASY, false, false),
                 resourceKey, holder, 0, 0, () -> InactiveProfiler.INSTANCE, null, false, 0);
     }

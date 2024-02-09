@@ -12,8 +12,10 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
@@ -38,7 +40,7 @@ public class DamageCalculator {
     public float getDamage(Entity entity, Level level, float power, double x, double y, double z) {
         float diameter = power * 2.0f;
         double distance = Math.sqrt(entity.distanceToSqr(x, y, z)) / diameter;
-        if (distance > 1.0 || entity.ignoreExplosion() || getDifficulty(level) == Difficulty.PEACEFUL) {
+        if (distance > 1.0 || ignoreExplosion(entity) || getDifficulty(level) == Difficulty.PEACEFUL) {
             return 0.0f;
         }
 
@@ -72,6 +74,14 @@ public class DamageCalculator {
         }
 
         return Math.max(damage, 0.0f);
+    }
+
+    // TODO: this!
+    /**
+     * Legacy method for {@link Entity#ignoreExplosion(Explosion)}.
+     */
+    private boolean ignoreExplosion(Entity entity) {
+        return false;
     }
 
     protected int getDamageProtection(LivingEntity livingEntity) {

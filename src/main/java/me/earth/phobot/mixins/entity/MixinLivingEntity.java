@@ -38,7 +38,7 @@ public abstract class MixinLivingEntity implements ITotemPoppingEntity, IDamageP
     }
 
     @Inject(method = "lerpTo", at = @At("HEAD"))
-    private void lerpToHook(double x, double y, double z, float yRot, float xRot, int lerpSteps, boolean bl, CallbackInfo ci) {
+    private void lerpToHook(double x, double y, double z, float yRot, float xRot, int steps, CallbackInfo ci) {
         PingBypassApi.getEventBus().post(new LerpToEvent(LivingEntity.class.cast(this), x, y, z, yRot, xRot, phobot$lastLerp));
         phobot$lastLerp = TimeUtil.getMillis();
     }

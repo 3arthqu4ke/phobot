@@ -48,7 +48,7 @@ public abstract class AbstractInvalidationTask<I extends CanBeInvalidated, M ext
             submitFinishTask();
         } catch (Exception e) {
             //TODO: fix when multihreading: Caused by: net.minecraft.world.level.chunk.MissingPaletteEntryException: Missing Palette entry for index 12.
-            //   at net.minecraft.world.level.chunk.HashMapPalette.valueFor(HashMapPalette.java:64) ~[minecraft-merged-1.20.1-loom.mappings.1_20_1.layered+hash.40359-v2.jar:?]
+            //   at net.minecraft.world.level.chunk.HashMapPalette.valueFor(HashMapPalette.java:64)
             // could this be a volatility issue?
             // For now the retry seems to work well.
             log.warn("Exception occurred in InvalidationTask: " + e.getMessage());

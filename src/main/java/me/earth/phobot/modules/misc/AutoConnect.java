@@ -1,5 +1,6 @@
 package me.earth.phobot.modules.misc;
 
+import com.mojang.realmsclient.client.RealmsClient;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
@@ -57,18 +58,7 @@ public class AutoConnect extends PhobotModule {
 
                 if (connect.getValue()) {
                     log.info("Connecting to " + ip.getValue() + ":" + port.getValue());
-                    QuickPlay.connect(mc, new GameConfig.QuickPlayData(null, null, ip.getValue() + ":" + port.getValue(), null), new ReloadInstance() {
-                        @Override
-                        @NotNull
-                        public CompletableFuture<?> done() {
-                            return CompletableFuture.completedFuture(new Object());
-                        }
-
-                        @Override
-                        public float getActualProgress() {
-                            return 0;
-                        }
-                    }, null);
+                    QuickPlay.connect(mc, new GameConfig.QuickPlayData(null, null, ip.getValue() + ":" + port.getValue(), null), RealmsClient.create(mc));
                 }
             }
         });
@@ -188,9 +178,9 @@ public class AutoConnect extends PhobotModule {
         }
 
         @Override
-        public void render(GuiGraphics guiGraphics, int i, int j, float f) {
-            this.renderBackground(guiGraphics);
-            super.render(guiGraphics, i, j, f);
+        public void render(GuiGraphics guiGraphics, int x, int y, float delta) {
+            this.renderBackground(guiGraphics, x, y, delta);
+            super.render(guiGraphics, x, y, delta);
         }
 
         private String getReconnectButtonText() {

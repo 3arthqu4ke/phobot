@@ -47,7 +47,8 @@ public class RaytraceUtilTest {
             assertEquals(Direction.UP, placeTargetResult.getDirection());
 
             FakePlayer otherPlayer = new FakePlayer(level);
-            level.addPlayer(1337, otherPlayer);
+            otherPlayer.setId(1337);
+            level.addEntity(otherPlayer);
             otherPlayer.setPos(new Vec3(0.5, 0.0, 0.5));
             assertNotNull(RaytraceUtil.raytraceEntities(entity, 8.0, e -> e.equals(otherPlayer)));
             assertNotNull(RaytraceUtil.raytraceEntity(entity, otherPlayer));

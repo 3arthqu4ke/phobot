@@ -21,10 +21,10 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.common.ServerboundKeepAlivePacket;
+import net.minecraft.network.protocol.common.ServerboundPongPacket;
+import net.minecraft.network.protocol.common.ServerboundResourcePackPacket;
 import net.minecraft.network.protocol.game.ClientboundBundlePacket;
-import net.minecraft.network.protocol.game.ServerboundKeepAlivePacket;
-import net.minecraft.network.protocol.game.ServerboundPongPacket;
-import net.minecraft.network.protocol.game.ServerboundResourcePackPacket;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -86,7 +86,7 @@ public class LoggerModule extends ModuleImpl {
                     try {
                         FriendlyByteBuf buf = new FriendlyByteBuf(event.buffer());
                         int id = buf.readVarInt();
-                        Packet<?> packet = ConnectionProtocol.PLAY.createPacket(PacketFlow.SERVERBOUND, id, buf);
+                        Packet<?> packet = ConnectionProtocol.PLAY.codec(PacketFlow.SERVERBOUND).createPacket(id, buf);
                         logPacket(packet, "Outgoing ", false, chat.getValue(), outgoing.getValue(), lastOutgoing);
                     } catch (Exception e) {
                         log.error("Error reading packet from buffer", e);

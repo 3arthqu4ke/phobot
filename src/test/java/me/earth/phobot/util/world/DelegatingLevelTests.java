@@ -43,7 +43,7 @@ public class DelegatingLevelTests {
         try (ClientLevel clientLevel = TestUtil.createClientLevel()) {
             BlockStateLevel.Delegating level = new BlockStateLevel.Delegating(clientLevel);
             assertSame(InactiveProfiler.INSTANCE, level.getProfiler());
-            BlockState blockState = (BlockState) TestUtil.getUnsafe().allocateInstance(BlockState.class);
+            BlockState blockState = TestUtil.allocateInstance(BlockState.class);
             level.getMap().put(BlockPos.ZERO, blockState);
             assertSame(blockState, level.getBlockState(BlockPos.ZERO));
         }

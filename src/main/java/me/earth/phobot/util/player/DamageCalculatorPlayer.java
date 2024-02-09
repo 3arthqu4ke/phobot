@@ -11,6 +11,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Explosion;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -29,8 +30,8 @@ public class DamageCalculatorPlayer extends MovementPlayer implements IDamagePro
     }
 
     @Override
-    public boolean ignoreExplosion() {
-        return player.ignoreExplosion();
+    public boolean ignoreExplosion(Explosion explosion) {
+        return player.ignoreExplosion(explosion);
     }
 
     @Override

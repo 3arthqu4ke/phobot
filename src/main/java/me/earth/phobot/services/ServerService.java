@@ -7,6 +7,7 @@ import me.earth.pingbypass.api.event.SubscriberImpl;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.commons.event.network.PacketEvent;
 import net.minecraft.network.ConnectionProtocol;
+import net.minecraft.network.protocol.handshake.ClientIntent;
 import net.minecraft.network.protocol.handshake.ClientIntentionPacket;
 import org.jetbrains.annotations.Unmodifiable;
 
@@ -26,9 +27,9 @@ public class ServerService extends SubscriberImpl {
         listen(new Listener<PacketEvent.Send<ClientIntentionPacket>>() {
             @Override
             public void onEvent(PacketEvent.Send<ClientIntentionPacket> event) {
-                if (event.getPacket().getIntention() == ConnectionProtocol.LOGIN) {
-                    currentServerCC = IPS.contains(event.getPacket().getHostName());
-                    log.info("Joining " + event.getPacket().getHostName());
+                if (event.getPacket().intention() == ClientIntent.LOGIN) {
+                    currentServerCC = IPS.contains(event.getPacket().hostName());
+                    log.info("Joining " + event.getPacket().hostName());
                     log.info("Is cc: " + currentServerCC);
                 }
             }

@@ -6,10 +6,12 @@ import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.module.impl.ModuleImpl;
 import me.earth.pingbypass.api.setting.Setting;
 import me.earth.pingbypass.commons.event.network.PacketEvent;
+import net.minecraft.network.protocol.common.*;
 import net.minecraft.network.protocol.game.*;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+// TODO: remove, this is a bad idea?
 public class Packets extends ModuleImpl {
     private final AtomicInteger processingPosition = new AtomicInteger();
 
@@ -40,13 +42,13 @@ public class Packets extends ModuleImpl {
             }
         });
 
-        listen(new Listener<PacketEvent.Receive<ClientboundResourcePackPacket>>() {
+        listen(new Listener<PacketEvent.Receive<ClientboundResourcePackPushPacket>>() {
             @Override
-            public void onEvent(PacketEvent.Receive<ClientboundResourcePackPacket> event) {
+            public void onEvent(PacketEvent.Receive<ClientboundResourcePackPushPacket> event) {
                 synchronized (processingPosition) {
                     if (fast.getValue() && processingPosition.get() == 0) {
                         event.setCancelled(true);
-                        event.getConnection().pingbypass$send(new ServerboundResourcePackPacket(ServerboundResourcePackPacket.Action.FAILED_DOWNLOAD));
+                        event.getConnection().pingbypass$send(new ServerboundResourcePackPacket(event.getPacket().id(), ServerboundResourcePackPacket.Action.FAILED_DOWNLOAD));
                     }
                 }
             }

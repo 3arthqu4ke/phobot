@@ -38,7 +38,8 @@ public class BlockPathfinderTest implements ChecksBlockPlacingValidity {
             playerInfo.setAccessible(true);
             playerInfo.set(player, new PlayerInfo(player.getGameProfile(), false));
             player.setPos(new Vec3(1.5, -1, 1.5));
-            level.addPlayer(1337, player);
+            player.setId(1337);
+            level.addEntity(player);
 
             List<BlockPos> path = blockPathfinder.getShortestPath(new BlockPos(0, 2, 0), Blocks.OBSIDIAN, player, level, 2, this, blockPlacer);
             assertEquals(3, path.size());
