@@ -23,7 +23,7 @@ public class AntiCheat extends ModuleImpl {
 
     private final Setting<Boolean> miningRotations = bool("MiningRotations", true, "Rotates when mining.");
     private final Setting<Boolean> blockRotations = bool("BlockRotations", true, "Rotates when placing blocks.");
-    private final Setting<Boolean> crystalRotations = bool("CrystalRotations", false, "Rotates when placing crystals. (Not implemented yet)");
+    private final Setting<Boolean> crystalRotations = bool("CrystalRotations", false, "Rotates when placing crystals.");
     private final Setting<Boolean> attackRotations = bool("AttackRotations", false, "Rotates when attacking.");
 
     private final Setting<Integer> maxBuildHeight = number("MaxBuildHeight", 100, -64, 320, "Maximum buildheight of the server.");
