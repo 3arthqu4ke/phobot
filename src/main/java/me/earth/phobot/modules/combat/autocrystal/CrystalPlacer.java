@@ -1,60 +1,82 @@
 package me.earth.phobot.modules.combat.autocrystal;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
 import me.earth.phobot.damagecalc.CrystalPosition;
-import me.earth.phobot.modules.client.anticheat.StrictDirection;
 import me.earth.phobot.services.BlockPlacer;
 import me.earth.phobot.services.inventory.InventoryContext;
-import me.earth.phobot.util.time.TimeUtil;
 import me.earth.phobot.util.world.BlockStateLevel;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.network.protocol.game.ServerboundSwingPacket;
-import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.List;
 
+// TODO: tests should be very much possible for this!
+// TODO: revisiting this code to add crystal rotations I realize how shitty to maintain this is!!!
+//  even though the BlockPlacer was supposed to help with redundant code this is awful.
+//  but crystal rotations are hopefully the last thing to add.
 @Slf4j
-public record CrystalPlacer(CrystalPlacingModule module, Phobot phobot) {
-    public void place(LocalPlayer player, ClientLevel level, CrystalPosition pos) {
-        phobot.getInventoryService().use(context -> place(context, player, level, pos));
+@Getter
+@RequiredArgsConstructor
+@SuppressWarnings("ClassCanBeRecord")
+public class CrystalPlacer {
+    private final CrystalPlacingModule module;
+    private final Phobot phobot;
+
+    public boolean place(LocalPlayer player, ClientLevel level, CrystalPosition pos) {
+        CrystalPlacingAction action = placeAction(player, level, pos);
+        return action != null && action.isSuccessful();
     }
 
-    public void place(InventoryContext context, LocalPlayer player, ClientLevel level, CrystalPosition pos) {
+    // TODO: use in Bomber!
+    public @Nullable CrystalPlacingAction placeAction(LocalPlayer player, ClientLevel level, CrystalPosition pos) {
+        CrystalPlacingAction[] result = new CrystalPlacingAction[1];
+        phobot.getInventoryService().use(context -> result[0] = placeAction(context, player, level, pos, false));
+        return result[0];
+    }
+
+    // TODO: use the packet rotations for the obsidian too!!!
+    public @Nullable CrystalPlacingAction placeAction(InventoryContext context, LocalPlayer player, ClientLevel level, CrystalPosition pos, boolean packetRotations) {
         if (phobot.getInventoryService().getLockedIntoTotem().get()) {
-            return;
+            return null;
         }
 
         if (pos.isObsidian()) {
             List<BlockPos> path = pos.getPath();
             if (path == null) {
-                return;
+                return null;
             }
 
             BlockPlacer placer = module.getBlockPlacer();
             synchronized (placer) {
                 if (placer.isInTick()) { // to be safe also check if we are on the same thread? Having InventoryContext should ensure locking tho
+                    BlockPlacer.Action currentAction = null;
                     boolean crystalWasNull = placer.getCrystal() == null;
                     for (int i = 1; i < path.size(); i++) {
                         BlockPos obbyPos = path.get(i);
-                        if (!module.placePos(obbyPos, Blocks.OBSIDIAN, player, level)) {
+                        BlockPlacer.Action placeAction = module.placeAction(obbyPos, Blocks.OBSIDIAN, player, level);
+                        if (placeAction == null) {
                             placer.getActions().removeIf(action -> action.getModule() == module);
                             if (crystalWasNull) {
                                 placer.setCrystal(null);
                             }
 
-                            return;
+                            return null;
+                        } else {
+                            currentAction = updateDependencies(placeAction, currentAction);
                         }
                     }
 
-                    placer.getActions().add(BlockPlacer.Action.crystalPlacingAction(pos, this));
+                    CrystalPlacingAction crystalPlacingAction = action(pos, packetRotations);
+                    updateDependencies(crystalPlacingAction, currentAction);
+                    placer.getActions().add(crystalPlacingAction);
+                    return crystalPlacingAction;
                 } else {
                     placer.startTick(player, level);
                     for (int i = 1; i < path.size(); i++) {
@@ -63,7 +85,7 @@ public record CrystalPlacer(CrystalPlacingModule module, Phobot phobot) {
                             placer.getActions().clear();
                             placer.setCrystal(null);
                             placer.endTick(context, player, level);
-                            return;
+                            return null;
                         }
                     }
 
@@ -71,51 +93,38 @@ public record CrystalPlacer(CrystalPlacingModule module, Phobot phobot) {
                     if (placer.isCompleted()) {
                         BlockStateLevel.Delegating delegating = new BlockStateLevel.Delegating(level);
                         delegating.getMap().put(pos, Blocks.OBSIDIAN.defaultBlockState());
-                        placeCrystal(context, player, delegating, pos);
+                        CrystalPlacingAction crystalPlacingAction = action(pos, packetRotations);
+                        crystalPlacingAction.execute(Collections.emptySet(), context, player, delegating);
+                        return crystalPlacingAction;
                     } else {
                         CrystalPosition copy = pos.copy();
                         copy.setObbyTries(pos.getObbyTries() + 1);
                         if (copy.getObbyTries() <= path.size()) {
                             module.obbyPos(copy);
                         }
+
+                        return null;
                     }
                 }
             }
-        } else {
-            placeCrystal(context, player, level, pos);
         }
+
+        CrystalPlacingAction crystalPlacingAction = action(pos, packetRotations);
+        crystalPlacingAction.execute(Collections.emptySet(), context, player, level);
+        return crystalPlacingAction;
     }
 
-    private void placeCrystal(InventoryContext context, LocalPlayer player, ClientLevel level, CrystalPosition pos) {
-        InventoryContext.SwitchResult switchResult = context.switchTo(Items.END_CRYSTAL, InventoryContext.DEFAULT_SWAP_SWITCH);
-        if (switchResult == null) {
-            return;
+    private CrystalPlacingAction action(CrystalPosition position, boolean packetRotations) {
+        return new CrystalPlacingAction(position, this, packetRotations);
+    }
+
+    private BlockPlacer.Action updateDependencies(BlockPlacer.Action action, @Nullable BlockPlacer.Action currentAction) {
+        if (currentAction != null) {
+            action.getDependencies().addAll(currentAction.getDependencies());
+            action.getDependencies().add(currentAction);
         }
 
-        BlockPos immutable = pos.immutable();
-        module.lastCrystalPos(immutable.above());
-        long time = TimeUtil.getMillis();
-        module.map().put(immutable, time);
-        BlockHitResult hitResult;
-        if (phobot.getAntiCheat().getCrystalStrictDirection().getValue() != StrictDirection.Type.Vanilla) {
-            Direction dir = phobot.getAntiCheat().getCrystalStrictDirectionCheck().getStrictDirection(immutable, player, level);
-            if (dir == null) {
-                return;
-            }
-
-            Vec3 vec = new Vec3(pos.getX() + 0.5 - dir.getStepX() * 0.5 + dir.getStepX(),
-                                pos.getY() + 0.5 - dir.getStepY() * 0.5 + dir.getStepY(),
-                                pos.getZ() + 0.5 - dir.getStepZ() * 0.5 + dir.getStepZ());
-            hitResult = new BlockHitResult(vec, dir, immutable, false);
-        } else {
-            hitResult = new BlockHitResult(new Vec3(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5), Direction.DOWN, immutable, false);
-        }
-
-        ServerboundUseItemOnPacket packet = new ServerboundUseItemOnPacket(switchResult.hand(), hitResult, 0);
-        player.connection.send(packet);
-        player.connection.send(new ServerboundSwingPacket(switchResult.hand()));
-        module.setRenderPos(immutable);
-        module.placeTimer().reset();
+        return action;
     }
 
 }

@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
 import me.earth.phobot.damagecalc.CrystalPosition;
 import me.earth.phobot.ducks.IEntity;
+import me.earth.phobot.event.PreMotionPlayerUpdateEvent;
 import me.earth.phobot.event.RenderEvent;
 import me.earth.phobot.modules.BlockPlacingModule;
 import me.earth.phobot.services.BlockPlacer;
@@ -15,6 +16,8 @@ import me.earth.phobot.services.SurroundService;
 import me.earth.phobot.services.inventory.InventoryContext;
 import me.earth.phobot.util.PositionPool;
 import me.earth.phobot.util.ResetUtil;
+import me.earth.phobot.util.math.RaytraceUtil;
+import me.earth.phobot.util.math.RotationUtil;
 import me.earth.phobot.util.render.Renderer;
 import me.earth.phobot.util.time.StopWatch;
 import me.earth.phobot.util.time.TimeUtil;
@@ -27,6 +30,7 @@ import me.earth.pingbypass.commons.event.SafeListener;
 import me.earth.pingbypass.commons.event.loop.GameloopEvent;
 import me.earth.pingbypass.commons.event.network.PacketEvent;
 import me.earth.pingbypass.commons.event.network.PrePostSubscriber;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -99,6 +103,8 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
     private volatile BlockPos lastCrystalPos = new BlockPos(0, -1000, 0);
     @Setter
     private volatile CrystalPosition obbyPos = null;
+    @Setter
+    private volatile CrystalPlacingAction rotationAction = null;
     private Entity targetedPlayer;
     private Entity lastCrystal;
     private BlockPos renderPos;
@@ -120,8 +126,9 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
             @Override
             public void onPreEvent(PacketEvent.Receive<ClientboundAddEntityPacket> event) {
                 ClientLevel level = mc.level;
-                LocalPlayer player = mc.player;
-                if (level == null || player == null || !event.getPacket().getType().equals(EntityType.END_CRYSTAL)) {
+                LocalPlayer localPlayer = mc.player;
+                Player player = phobot.getLocalPlayerPositionService().getPlayerOnLastPosition(mc.player);
+                if (localPlayer == null || level == null || player == null || !event.getPacket().getType().equals(EntityType.END_CRYSTAL)) {
                     return;
                 }
 
@@ -130,11 +137,12 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
                 double z = event.getPacket().getZ();
                 EndCrystal endCrystal = new EndCrystal(level, x, y, z);
                 endCrystal.setId(event.getPacket().getId());
-                if (endCrystal.getBoundingBox().distanceToSqr(player.getEyePosition()) >= ServerGamePacketListenerImpl.MAX_INTERACTION_DISTANCE) {
+                if (endCrystal.getBoundingBox().distanceToSqr(player.getEyePosition()) >= ServerGamePacketListenerImpl.MAX_INTERACTION_DISTANCE
+                    || phobot.getAntiCheat().getAttackRotations().getValue() && !RaytraceUtil.areRotationsLegit(phobot, endCrystal)) {
                     return;
                 }
 
-                breakSpawningCrystal(this, player, level, endCrystal, false);
+                breakSpawningCrystal(this, localPlayer, level, endCrystal, false);
             }
         }.getListeners());
 
@@ -146,6 +154,16 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
                     event.getAabb().set(renderPos);
                     event.setBoxColor(1.0f, 1.0f, 1.0f, 1.0f, 0.4f);
                     Renderer.renderBoxWithOutlineAndSides(event, 1.5f, true);
+                }
+            }
+        });
+
+        listen(new SafeListener<PreMotionPlayerUpdateEvent>(mc, 1000) {
+            @Override
+            public void onEvent(PreMotionPlayerUpdateEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode multiPlayerGameMode) {
+                if (phobot.getAntiCheat().getAttackRotations().getValue() && lastCrystalPos.getY() != -1000 && !placeTimer.passed(150)) {
+                    float[] rotations = RotationUtil.getRotations(player, lastCrystalPos.getX() + 0.5, lastCrystalPos.getY(), lastCrystalPos.getZ() + 0.5);
+                    phobot.getMotionUpdateService().rotate(player, rotations[0], rotations[1]);
                 }
             }
         });
@@ -175,13 +193,27 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
 
     @Override
     public void updatePlacements(InventoryContext context, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
-        // TODO: prevent CrystalPlacer from placing obby!
+        CrystalPlacingAction rotation = rotationAction();
+        if (rotation != null) {
+            obbyPos(null);
+            rotationAction(null);
+            Calculation calculation = createCalculation(level, player);
+            calculation.calculatePlacements(false, rotation.getCrystalPosition());
+            obbyPos(null); // clear again to prevent loop
+            rotationAction(null);
+            return;
+        }
+
+        // TODO: prevent CrystalPlacer from placing obby! <--------- ??????????? WTF DOES THIS MEAN? WHAT WAS I THINKING?
         CrystalPosition obbyPos = obbyPos();
         if (obbyPos != null) {
             obbyPos(null);
+            rotationAction(null);
             Calculation calculation = createCalculation(level, player);
             calculation.preparePlaceCalculation();
             calculation.calculateObsidian(obbyPos);
+            obbyPos(null); // clear again to prevent loop
+            rotationAction(null);
         }
     }
 
@@ -203,12 +235,13 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
     }
 
     public void reset() {
+        rotationAction = null;
         lastCrystal = null;
         targetedPlayer = null;
         renderPos = null;
         lastCrystalPos = new BlockPos(0, -1000, 0);
         obbyPos = null;
-        // for garbage collection, we gotta remove all of the endcrystals
+        // for garbage collection, we have to remove all the EndCrystals
         for (CrystalPosition crystalPosition : this.positionPool.getPositions()) {
             crystalPosition.reset();
         }

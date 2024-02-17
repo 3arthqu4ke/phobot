@@ -2,6 +2,7 @@ package me.earth.phobot.util.math;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
+import me.earth.phobot.Phobot;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
@@ -19,6 +20,9 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -26,8 +30,23 @@ import java.util.function.Predicate;
 @Slf4j
 @UtilityClass
 public class RaytraceUtil {
+    public static boolean areRotationsLegit(Phobot phobot, Entity target) {
+        Entity rotationEntity = phobot.getLocalPlayerPositionService().getPlayerOnLastPosition(null);
+        return rotationEntity != null && areRotationsLegit(rotationEntity, target);
+    }
+
+    public static boolean areRotationsLegit(Entity rotationEntity, Entity target) {
+        EntityHitResult result;
+        return (result = raytraceEntity(rotationEntity, target)) != null
+            && target.equals(result.getEntity());
+    }
+
     public static @Nullable EntityHitResult raytraceEntity(Entity entity, Entity target) {
-        return raytraceEntities(entity, entity.distanceTo(target) + 4.0, e -> e.equals(target));
+        double distance = entity.distanceTo(target) + 4.0;
+        Vec3 eyePos = entity.getEyePosition();
+        Vec3 viewVec = getViewVec(entity);
+        Vec3 goal = eyePos.add(viewVec.x * distance, viewVec.y * distance, viewVec.z * distance);
+        return getEntityHitResult(entity, eyePos, goal, distance * distance, List.of(target));
     }
 
     public static @Nullable EntityHitResult raytraceEntities(Entity entity, double distance, Predicate<Entity> entityCheck) {
@@ -65,6 +84,19 @@ public class RaytraceUtil {
         return result;
     }
 
+    /**
+     * This will raytrace to a {@link BlockHitResult} where {@link BlockHitResult#getBlockPos()} offset by {@link BlockHitResult#getDirection()}
+     * equals the given target position. Use this method to get your "placeOn" position if you want to place in the target position.
+     * DO NOT use this method for crystal placement, use {@link #raytrace(Entity, Level, BlockPos, Direction, boolean)}
+     * or {@link #raytraceChecked(Entity, Level, BlockPos, Predicate, boolean)} instead.
+     *
+     * @param entity the entity from which to raytrace.
+     * @param level the level to get the blocks from.
+     * @param target the position we want to place a block in.
+     * @param directionCheck for strict direction checks.
+     * @param invert if we should perform an inverted ray trace if our ray exits on the other side at the right direction.
+     * @return the raytrace hit result.
+     */
     public static @Nullable BlockHitResult raytraceToPlaceTarget(Entity entity, Level level, BlockPos target, BiPredicate<BlockPos, Direction> directionCheck, boolean invert) {
         double distance = Math.sqrt(entity.distanceToSqr(target.getX() + 0.5, target.getY() + 0.5 - entity.getEyeHeight(), target.getZ() + 0.5)) + 3.0;
         Function<@Nullable BlockHitResult, @Nullable BlockHitResult> function = hitResult -> {
@@ -125,6 +157,50 @@ public class RaytraceUtil {
             double fluidDistance = fluidHitResult == null ? Double.MAX_VALUE : clipContext.getFrom().distanceToSqr(fluidHitResult.getLocation());
             return action.apply(interactionDistance <= fluidDistance ? interactionHitResult : fluidHitResult);
         }, clipContext -> null);
+    }
+
+    // basically ProjectileUtil.getEntityHitResult
+    @Nullable
+    private static EntityHitResult getEntityHitResult(@Nullable Entity requester, Vec3 from, Vec3 to, double distanceSquared, Collection<Entity> entities) {
+        double distSq = distanceSquared;
+        Entity result = null;
+        Vec3 current = null;
+        for (Entity entity : entities) {
+            Vec3 clipVec;
+            double currentDistance;
+            AABB bb = entity.getBoundingBox().inflate(entity.getPickRadius());
+            Optional<Vec3> optional = bb.clip(from, to);
+            if (bb.contains(from)) {
+                if (!(distSq >= 0.0)) {
+                    continue;
+                }
+
+                result = entity;
+                current = optional.orElse(from);
+                distSq = 0.0;
+                continue;
+            }
+
+            if (optional.isEmpty() || !((currentDistance = from.distanceToSqr(clipVec = optional.get())) < distSq) && distSq != 0.0) {
+                continue;
+            }
+
+            if (requester != null && entity.getRootVehicle() == requester.getRootVehicle()) {
+                if (distSq != 0.0) {
+                    continue;
+                }
+
+                result = entity;
+                current = clipVec;
+                continue;
+            }
+
+            result = entity;
+            current = clipVec;
+            distSq = currentDistance;
+        }
+
+        return result == null ? null : new EntityHitResult(result, current);
     }
 
 }

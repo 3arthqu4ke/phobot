@@ -11,6 +11,8 @@ import me.earth.phobot.util.ResetUtil;
 import me.earth.phobot.util.entity.EntityUtil;
 import me.earth.phobot.util.math.MathUtil;
 import me.earth.phobot.util.math.PositionUtil;
+import me.earth.phobot.util.math.RaytraceUtil;
+import me.earth.phobot.util.math.RotationUtil;
 import me.earth.phobot.util.player.MovementPlayer;
 import me.earth.pingbypass.api.gui.hud.DisplaysHudInfo;
 import me.earth.pingbypass.api.module.impl.Categories;
@@ -47,12 +49,14 @@ public class KillAura extends PhobotModule implements DisplaysHudInfo {
     private final Setting<Boolean> other = bool("Others", false, "Targets other entities.");
     @Getter
     private @Nullable Target target;
+    private boolean attacked;
 
     public KillAura(Phobot phobot) {
         super(phobot, "KillAura", Categories.COMBAT, "Attacks players in range.");
         listen(new SafeListener<PreMotionPlayerUpdateEvent>(mc) {
             @Override
             public void onEvent(PreMotionPlayerUpdateEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
+                attacked = false;
                 target = computeTarget(player, level);
                 attack(target, player, gameMode, true);
             }
@@ -86,25 +90,50 @@ public class KillAura extends PhobotModule implements DisplaysHudInfo {
 
     private void attack(@Nullable Target target, LocalPlayer player, MultiPlayerGameMode gameMode, boolean preMotion) {
         if (target == null
+                || attacked
                 || player.isSpectator()
                 || player.getAttackStrengthScale(0.5f) < 1.0f
-                || preMotion && target.inRangeForCurrentPos()
-                || !preMotion && !target.inRangeForCurrentPos()
                 || weapon.getValue() && !(player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof SwordItem
                                             || player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof AxeItem)) {
             return;
         }
 
-        if (target.teleportPos() != null) {
-            if (!preMotion) {
-                return;
+        // we have not yet send our position to the server
+        if (preMotion) {
+            // we can hit the target from the position we currently have on the server
+            if (target.inRangeForLastPos()) {
+                // our rotations are legit, we can attack
+                if (!phobot.getAntiCheat().getAttackRotations().getValue() || RaytraceUtil.areRotationsLegit(phobot, target.entity)) {
+                    executeAttack(target, player, gameMode);
+                } else {
+                    // rotate and wait for postMotion event
+                    float[] rotations = RotationUtil.getRotations(player, target.entity);
+                    phobot.getMotionUpdateService().rotate(player, rotations[0], rotations[1]);
+                }
+            // we have to wait for the PostMotionUpdateEvent
+            } else {
+                // target is not in range for the position we have on the server, we have to teleport
+                if (!target.inRangeForCurrentPos() && target.teleportPos() != null) {
+                    phobot.getMotionUpdateService().setPosition(player, target.teleportPos());
+                }
+
+                if (phobot.getAntiCheat().getAttackRotations().getValue() && !RaytraceUtil.areRotationsLegit(player, target.entity)) {
+                    float[] rotations = RotationUtil.getRotations(player, target.entity);
+                    phobot.getMotionUpdateService().rotate(player, rotations[0], rotations[1]);
+                }
             }
-
-            phobot.getMotionUpdateService().setPosition(player, target.teleportPos());
+        } else { // we are in the post motion update event and have sent our position to the server
+            if ((!phobot.getAntiCheat().getAttackRotations().getValue() || RaytraceUtil.areRotationsLegit(phobot, target.entity))
+                    && isInRange(target.entity, phobot.getLocalPlayerPositionService().getPosition(), player.getEyeHeight())) {
+                executeAttack(target, player, gameMode);
+            }
         }
+    }
 
+    private void executeAttack(Target target, LocalPlayer player, MultiPlayerGameMode gameMode) {
         gameMode.attack(player, target.entity());
         player.swing(InteractionHand.MAIN_HAND);
+        attacked = true;
     }
 
     private @Nullable Target computeTarget(LocalPlayer player, ClientLevel level) {

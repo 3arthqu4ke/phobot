@@ -152,7 +152,7 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
         unloadingService.registerModule(suicide);
         AutoTrap autoTrap = new AutoTrap(phobot, surroundService);
         unloadingService.registerModule(autoTrap);
-        Bomber bomber = new Bomber(phobot, speedmine, autoCrystal, autoTrap);
+        Bomber bomber = new Bomber(phobot, speedmine, autoCrystal, autoTrap, surroundService);
         unloadingService.registerModule(bomber);
         KillAura killAura = new KillAura(phobot);
         unloadingService.registerModule(killAura);

@@ -83,7 +83,8 @@ public class BlockPlacer extends SubscriberImpl {
                         }
                     }
 
-                    if (antiCheat.getBlockRotations().getValue() && !actions.isEmpty()) {
+                    if (antiCheat.getBlockRotations().getValue() && !actions.isEmpty()
+                            || antiCheat.getCrystalRotations().getValue() && actions.stream().anyMatch(Action::isCrystalAction)) {
                         boolean spoofing = motionUpdateService.spoofing;
                         motionUpdateService.spoofing = false;
                         // end the tick before we sent our rotation and position to the server, so we can place blocks that rely on the last rotation sent
@@ -116,6 +117,7 @@ public class BlockPlacer extends SubscriberImpl {
         inTick = true;
     }
 
+    // TODO: this needs rotations!
     public void breakCrystal(LocalPlayer player) {
         if (crystal != null && !attacked) {
             // TODO: use attacking service with InventoryContext!!!!
@@ -234,6 +236,7 @@ public class BlockPlacer extends SubscriberImpl {
                     MotionUpdateService motionUpdateService = blockPlacer.motionUpdateService;
                     if (packetRotations && !motionUpdateService.isInPreUpdate()) {
                         float[] rotations = RotationUtil.getRotations(rotationPlayer, stateLevel, placeOn, direction);
+                        // TODO: move packet rotation after inventory check like in CrystalPlacingAction?
                         player.connection.send(new ServerboundMovePlayerPacket.Rot(rotations[0], rotations[1], rotationPlayer.onGround()));
                         rotationPlayer = blockPlacer.getLocalPlayerPositionService().getPlayerOnLastPosition(player); // update, player has new rotation
                         hitResult = new BlockHitResult(RotationUtil.getHitVec(placeOn, stateLevel, direction), direction, placeOn, false);
@@ -302,17 +305,8 @@ public class BlockPlacer extends SubscriberImpl {
             return true;
         }
 
-        public static Action crystalPlacingAction(CrystalPosition crystalPosition, CrystalPlacer crystalPlacer) {
-            BlockPos immutable = crystalPosition.immutable();
-            CrystalPosition copy = crystalPosition.copy();
-            return new Action(crystalPlacer.module(), immutable, immutable, Direction.UP, Items.END_CRYSTAL, false, false, false, crystalPlacer.module().getBlockPlacer(), false) {
-                @Override
-                public boolean execute(Set<Action> completedActions, InventoryContext context, LocalPlayer player, ClientLevel clientLevel) {
-                    BlockStateLevel.Delegating level = Objects.requireNonNull(getBlockPlacer().getCustomBlockStateLevel(), "BlockPlace.stateLevel was null!");
-                    crystalPlacer.place(context, player, level, copy);
-                    return true;
-                }
-            };
+        public boolean isCrystalAction() {
+            return false;
         }
     }
 

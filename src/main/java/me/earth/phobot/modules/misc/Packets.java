@@ -7,7 +7,7 @@ import me.earth.pingbypass.api.module.impl.ModuleImpl;
 import me.earth.pingbypass.api.setting.Setting;
 import me.earth.pingbypass.commons.event.network.PacketEvent;
 import net.minecraft.network.protocol.common.*;
-import net.minecraft.network.protocol.game.*;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 
 import java.util.concurrent.atomic.AtomicInteger;
 

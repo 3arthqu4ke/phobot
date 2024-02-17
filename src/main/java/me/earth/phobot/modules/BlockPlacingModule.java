@@ -15,6 +15,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -58,42 +59,46 @@ public abstract class BlockPlacingModule extends PhobotModule implements ChecksB
         return true;
     }
 
-    @SuppressWarnings("UnusedReturnValue")
     public boolean placePos(BlockPos pos, Block block, LocalPlayer player, ClientLevel level) {
+        return placeAction(pos, block, player, level) != null;
+    }
+
+    public @Nullable BlockPlacer.Action placeAction(BlockPos pos, Block block, LocalPlayer player, ClientLevel level) {
         for (BlockPlacer.Action action : blockPlacer.getActions()) {
             if (action.getPos().equals(pos)) {
-                return true;
+                return null;
             }
         }
 
         if (!level.getWorldBorder().isWithinBounds(pos)) {
-            return false;
+            return null;
         }
 
         BlockState state = level.getBlockState(pos);
         if (!state.canBeReplaced()) {
-            return false;
+            return null;
         }
 
         Set<BlockPlacer.Action> dependencies = new HashSet<>();
         Direction direction = getDirection(level, player, pos, dependencies);
         if (direction == null) {
-            return false;
+            return null;
         }
 
         // TODO: not necessary for crystalpvp.cc, but trace the proper checks in BlockItem, they are much more accurate
         BlockPos placeOn = pos.relative(direction);
-        BlockState futureState = block.defaultBlockState(); // TODO: use this!!! block.getStateForPlacement(blockPlaceContext) though for the simple blocks on cc this should be fine for now
+        // TODO: use this!!! block.getStateForPlacement(blockPlaceContext) though for the simple blocks on cc this should be fine for now
+        BlockState futureState = block.defaultBlockState();
         VoxelShape shape = futureState.getCollisionShape(level, pos, blockPlacer.getCollisionContext());
         if (!shape.isEmpty() && isBlockedByEntity(pos, shape, player, level, entity -> false)) {
-            return false;
+            return null;
         }
 
-        BlockPlacer.Action action = new BlockPlacer.Action(this, placeOn.immutable(), pos.immutable(), direction.getOpposite(), block.asItem(), !noGlitchBlocks.getValue(), isUsingSetCarriedItem(),
-                isUsingPacketRotations(), getBlockPlacer(), requiresExactDirection());
+        BlockPlacer.Action action = new BlockPlacer.Action(this, placeOn.immutable(), pos.immutable(), direction.getOpposite(), block.asItem(),
+                !noGlitchBlocks.getValue(), isUsingSetCarriedItem(), isUsingPacketRotations(), getBlockPlacer(), requiresExactDirection());
         action.getDependencies().addAll(dependencies);
         addAction(blockPlacer, action);
-        return true;
+        return action;
     }
 
     protected boolean isUsingPacketRotations() {
@@ -115,12 +120,6 @@ public abstract class BlockPlacingModule extends PhobotModule implements ChecksB
             update(context, player, level, gameMode);
             getBlockPlacer().endTick(context, player, level);
         });
-    }
-
-    public enum Rotate {
-        None,
-        Rotate,
-        Packets
     }
 
 }

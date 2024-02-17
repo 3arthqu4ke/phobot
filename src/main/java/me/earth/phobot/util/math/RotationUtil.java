@@ -38,6 +38,10 @@ public class RotationUtil {
         return new Vec3(x, y, z);
     }
 
+    public static float[] getRotations(Entity entity, Entity target) {
+        return getRotations(entity.getX(), entity.getEyeY(), entity.getZ(), target.getX(), target.getY() + target.getEyeHeight() / 2.0, target.getZ(), entity.yRotO);
+    }
+
     public static float[] getRotations(Entity entity, double toX, double toY, double toZ) {
         return getRotations(entity.getX(), entity.getEyeY(), entity.getZ(), toX, toY, toZ, entity.yRotO);
     }

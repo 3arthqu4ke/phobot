@@ -26,7 +26,7 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
     }
 
     // TODO: do not use redirect, we already need the less favorable redirect at isPassenger to avoid a conflict with future
-    @Redirect(method = "aiStep", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isPassenger()Z", ordinal = 0))
+    @Redirect(method = "aiStep", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isPassenger()Z", ordinal = 1))
     private boolean isPassengerHook(LocalPlayer player) {
         NoSlowDown.UseItemEvent event = new NoSlowDown.UseItemEvent();
         PingBypassApi.getEventBus().post(event);

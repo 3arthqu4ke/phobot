@@ -52,11 +52,11 @@ public class Calculation extends BreakCalculation implements Runnable {
 
     @Override
     public void run() throws RunningOnDifferentThreadException {
-        if (runBreakingCalculation && module.breakTimer().passed(100)/*dont run poll breaking that much*/) {
+        if (runBreakingCalculation && module.breakTimer().passed(100)/*Don't run poll breaking that much*/) {
             breakCrystals();
         }
 
-        calculatePlacements();
+        calculatePlacements(true, module.positionPool().getPositions());
     }
 
     @Override
@@ -70,13 +70,13 @@ public class Calculation extends BreakCalculation implements Runnable {
         eyeY = player.getEyeY();
     }
 
-    protected void calculatePlacements() {
+    protected void calculatePlacements(boolean obby, CrystalPosition... crystalPositions) {
         if (!module.placeTimer().passed(module.placeDelay().getValue()) || crystalCount >= 1 && !attacked) {
             return;
         }
 
         preparePlaceCalculation();
-        for (CrystalPosition position : module.positionPool().getPositions()) {
+        for (CrystalPosition position : crystalPositions) {
             if (position.getOffset().getY() + eyeY > maxY) {
                 continue;
             }
@@ -98,7 +98,7 @@ public class Calculation extends BreakCalculation implements Runnable {
             return;
         }
 
-        if (!placed && module.obbyTimer().passed(500)/* Dont run obsidian calculation too much*/) {
+        if (obby && !placed && module.obbyTimer().passed(500)/* Don't run obsidian calculation too much*/) {
             calculateObsidian(module.positionPool().getPositions());
             module.obbyTimer().reset();
         }
@@ -263,8 +263,13 @@ public class Calculation extends BreakCalculation implements Runnable {
     }
 
     private void place(CrystalPosition crystalPosition) {
-        module.placer().place(player, level, crystalPosition);
-        placed = true;
+        CrystalPlacingAction action = module.placer().placeAction(player, level, crystalPosition);
+        if (action != null) {
+            placed = true;
+            if (!crystalPosition.isObsidian() && action.isFailedDueToRotations() && action.isExecuted() && !action.isSuccessful()) {
+                module.rotationAction(action);
+            }
+        }
     }
 
     protected float getSelfPlaceDamage(BlockPos pos, Level level) {

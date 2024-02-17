@@ -30,7 +30,7 @@ public class LocalPlayerPositionService extends PlayerPositionService {
     public LocalPlayerPositionService(Minecraft mc) {
         super(THRESHOLD);
         this.mc = mc;
-        listen(new Listener<PostMotionPlayerUpdateEvent>() {
+        listen(new Listener<PostMotionPlayerUpdateEvent>(Integer.MAX_VALUE) {
             @Override
             public void onEvent(PostMotionPlayerUpdateEvent event) {
                 addToPositions(position, tickPositions);
@@ -115,7 +115,10 @@ public class LocalPlayerPositionService extends PlayerPositionService {
         if (result != null) {
             Vec3 pos = result.position();
             // TODO: there is still some uncertainty whether this pose is the server pose or not...
-            result.setPose(fallback.getPose());
+            if (fallback != null) {
+                result.setPose(fallback.getPose());
+            }
+
             // result.refreshDimensions(); no need to, this is done by Entity.onSyncedDataUpdated, but this might change results position, so:
             result.setPos(pos);
             return result;

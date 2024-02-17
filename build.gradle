@@ -37,12 +37,12 @@ allprojects {
 		/*maven {
 			name 'local'
 			url project.rootDir.toURI().toURL().toString() + '/libs'
-		}
+		}*/
 
 		maven {
 			name 'PingBypassSuperDirMaven'
 			url project.rootDir.parentFile.toURI().toURL().toString() + '/pingbypass/build/maven'
-		}*/
+		}
 
 		maven {
 			name = "ParchmentmcMaven"
@@ -142,6 +142,7 @@ subprojects {
 
 	afterEvaluate {
 		runClient {
+			dependsOn(build)
 			doFirst {
 				checkThatClientOrServerAreOnClasspath()
 				if (project.name == 'forge' && rootProject.enable_forge_runs != 'true') {

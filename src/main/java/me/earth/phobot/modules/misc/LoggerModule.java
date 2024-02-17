@@ -63,6 +63,7 @@ public class LoggerModule extends ModuleImpl {
         listen(new Listener<PacketEvent.Receive<?>>(Integer.MIN_VALUE) {
             @Override
             public void onEvent(PacketEvent.Receive<?> event) {
+                // TODO: use the new changes in PingBypass, no cast required at IConnection
                 if (event.getConnection() instanceof Connection connection && connection.getReceiving() == PacketFlow.CLIENTBOUND) {
                     logPacket(event.getPacket(), "Incoming ", event.isCancelled(), chat.getValue(), incoming.getValue(), total.getValue() ? lastOutgoing : lastIncoming);
                 }
@@ -72,6 +73,7 @@ public class LoggerModule extends ModuleImpl {
         listen(new Listener<PacketEvent.Send<?>>(Integer.MIN_VALUE) {
             @Override
             public void onEvent(PacketEvent.Send<?> event) {
+                // TODO: use the new changes in PingBypass, no cast required at IConnection
                 if (!buffer.getValue() && event.getConnection() instanceof Connection connection && connection.getReceiving() == PacketFlow.CLIENTBOUND) {
                     logPacket(event.getPacket(), "Outgoing ", event.isCancelled(), chat.getValue(), outgoing.getValue(), lastOutgoing);
                 }
@@ -133,7 +135,9 @@ public class LoggerModule extends ModuleImpl {
                             continue;
                         }
 
+                        // TODO: ArrayList cannot be made accessible, catch InaccessibleOjectException and log to String?
                         field.setAccessible(true);
+
                         Object obj = field.get(object);
                         String objToString;
                         if (obj != null && obj.getClass().isArray()) {
