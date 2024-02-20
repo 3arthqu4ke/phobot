@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -75,7 +76,11 @@ public class MovementParable {
         for (int i = 0; i < size; i++) {
             double y = verticalValues[i] + fromY;
             double x = horizontalValues[i];
-            if (y >= targetY - vLeniency && y <= targetY + vLeniency && x >= distance - hLeniency && x <= distance + hLeniency) {
+            if (y >= targetY - vLeniency
+                // if i == size - 1, we have reached the part of the parable where it just goes straight down and we can hit any targetY below y
+                && (y <= targetY + vLeniency || i == size - 1)
+                && x >= distance - hLeniency
+                && x <= distance + hLeniency) {
                 return true;
             }
         }
@@ -84,9 +89,13 @@ public class MovementParable {
     }
 
     public static MovementParable calculate(MovementPlayer potionAndMovementPlayer, ClientLevel level) {
+        return calculate(potionAndMovementPlayer, null, level);
+    }
+
+    public static MovementParable calculate(MovementPlayer potionAndMovementPlayer, @Nullable Movement.State initialState, ClientLevel level) {
         List<Double> horizontalValues = new ArrayList<>();
         List<Double> verticalValues = new ArrayList<>();
-        MovementPlayer player = getMovementPlayer(potionAndMovementPlayer.getMovement(), potionAndMovementPlayer, level);
+        MovementPlayer player = getMovementPlayer(potionAndMovementPlayer.getMovement(), potionAndMovementPlayer, initialState, level);
         double maxY = 0.0;
         for (int i = 0; i < 256; i++) {
             player.travel();
@@ -104,10 +113,10 @@ public class MovementParable {
         return new MovementParable(horizontalValues.stream().mapToDouble(d -> d).toArray(), verticalValues.stream().mapToDouble(d -> d).toArray());
     }
 
-    private static MovementPlayer getMovementPlayer(Movement movement, MovementPlayer potionPlayer, ClientLevel level) {
+    private static MovementPlayer getMovementPlayer(Movement movement, MovementPlayer potionPlayer, @Nullable Movement.State initialState, ClientLevel level) {
         DelegatingClientLevel emptyLevel = getDelegatingClientLevel(level);
 
-        Movement.State[] state = new Movement.State[]{new Movement.State()};
+        Movement.State[] state = new Movement.State[]{ initialState == null ? new Movement.State() : initialState };
         MovementPlayer player = new MovementPlayer(emptyLevel);
         potionPlayer.getActiveEffects().forEach(player::addEffect);
         player.setPos(Vec3.ZERO);
@@ -116,7 +125,9 @@ public class MovementParable {
         player.verticalCollisionBelow = true;
         player.verticalCollision = true;
         player.setOnGround(true);
-        state[0].stage = 2;
+        if (initialState == null) {
+            state[0].stage = 2;
+        }
 
         player.setMoveCallback(delta -> {
             state[0] = movement.move(player, emptyLevel, state[0], new Vec3(1.0, player.getDeltaMovement().y, 0.0));

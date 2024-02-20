@@ -30,7 +30,6 @@ import me.earth.pingbypass.commons.event.SafeListener;
 import me.earth.pingbypass.commons.event.loop.GameloopEvent;
 import me.earth.pingbypass.commons.event.network.PacketEvent;
 import me.earth.pingbypass.commons.event.network.PrePostSubscriber;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;

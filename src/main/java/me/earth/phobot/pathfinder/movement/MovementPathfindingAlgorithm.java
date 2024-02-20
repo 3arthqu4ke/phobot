@@ -30,6 +30,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+// TODO: optimize, check horizontal collisions and try to optimize them away!
+/**
+ * We have a path of {@link MeshNode}s. Now we want to know where to actually move, so we need a path of {@link MovementNode}s.
+ */
 @Slf4j
 @Getter
 @Setter
@@ -43,7 +47,9 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
     private final FastFall fastFall;
 
     private Collection<MobEffectInstance> effects;
-    private MovementParable parable; // TODO: update parable with Movement.State, we can jump further if we have bunnyhopped already!
+    // TODO: update parable with Movement.State, we can jump further if we have bunny hopped already!
+    //  a problem is that we seem to be stage = 0, not stage = 2 for jumping when onGround and checking the parable
+    private MovementParable parable;
     private MovementNode start;
     private MovementNode goal;
     private MovementNode currentMove;
@@ -66,6 +72,8 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
     public boolean update() {
         assert currentMove != null;
         currentMove.apply(player);
+        log.info("Current state: " + currentMove.state());
+        // we go through all MeshNodes and check if we can reach them using a bunny hop jump.
         for (int i = path.getPath().size() - 1; i > (currentMove.isStart() ? -1/* start node could be before the start mesh node*/ : Math.max(0, currentMove.targetNodeIndex())); i--) {
             MeshNode meshNode = path.getPath().get(i);
             boolean isGoal = i == path.getPath().size() - 1;
@@ -77,8 +85,9 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
             // TODO: make this better? Instead of canReach check if we are on the parable?
             if (parable.isOnParable(player.getX(), player.getY(), player.getZ(), x, y, z, 0.5, 0.125) && (currentMove.isStart() || i > currentMove.targetNodeIndex())) {
                 log.info("Can reach " + i + " at " + (meshNode.getX() + 0.5) + " " + (meshNode.getY() + " " +  (meshNode.getZ() + 0.5) + " from " + player.position()));
+                // we can reach this MeshNode from our current position, attempt to move towards it
                 if (moveTowards(x, y, z, isGoal, i, false)) {
-                    log.info("Successfully bunnyhopped towards " + meshNode);
+                    log.info("Successfully bunny hopped towards " + meshNode);
                     return true;
                 } else {
                     currentMove.apply(player);
@@ -86,12 +95,18 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
             }
         }
 
+        // We did not manage to reach a new node by bunny hopping, now we use normal walking (strafing).
+        // For strafing we only check the next MeshNode in the path, because it is closest and strafing is just a direct line.
+
+        // When strafing we also check the MeshNode after the next one, in case it is diagonal to the current one.
+        // In that case we can try to optimize and move diagonally to it.
         currentMove.apply(player); // unnecessary, no?
         int targetNodeIndex = currentMove.isStart() ? 0 : currentMove.targetNodeIndex() + 1 < path.getPath().size() ? currentMove.targetNodeIndex() + 1 : path.getPath().size() - 1;
         MeshNode meshNode = path.getPath().get(targetNodeIndex);
         if (targetNodeIndex + 1 < path.getPath().size()) {
             MeshNode next = path.getPath().get(targetNodeIndex + 1);
-            MeshNode actualCurrentMeshNode = path.getPath().get(currentMove.targetNodeIndex());          // next is diagonal to actualCurrent
+            MeshNode actualCurrentMeshNode = path.getPath().get(currentMove.targetNodeIndex());
+            // check if the next node is diagonal to actualCurrent and try to move
             if (Math.abs(actualCurrentMeshNode.getX() - next.getX()) == 1 && Math.abs(actualCurrentMeshNode.getZ() - next.getZ()) == 1 && strafeTowards(next, targetNodeIndex + 1)) {
                 return true;
             }
@@ -121,21 +136,25 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
     }
 
     private boolean moveTowards(double x, double y, double z, boolean isGoal, int targetNodeIndex, boolean strafe) {
+        // The horizontal direction to move towards the target x and z from our current position.
         Vec3 initialDelta = new Vec3(x - currentMove.getX(), 0.0, z - currentMove.getZ()).normalize();
+
         MovementNode firstJump = null;
         MovementNode currentJump = currentMove;
         MovementNode lastJump = null;
         MovementNode tenthLast = null;
+
         double prevDistance = currentJump.distanceSq(x, y, z);
         int movedAwayCount = 0;
         int sameCount = 0;
         while (currentJump != null) {
+            // We have not moved, might have gotten stuck somewhere
             if (currentJump.positionEquals(lastJump)) {
-                log.info("Position equals!");
+                log.info("Position equals! " + initialDelta + ", horizontal collision: " + player.horizontalCollision);
                 sameCount++;
                 // TODO: check if this makes sense?
                 if (sameCount > 1) { // allow one tick of position being the same, this could be because we are waiting for collision etc.?
-                    log.info(x + ", " + y + ", " + z + " from " + currentJump + " the current " + currentJump + " is the same as " + lastJump);
+                    log.info("SameCount: " + x + ", " + y + ", " + z + " from " + currentJump + " the current " + currentJump + " is the same as " + lastJump);
                     currentJump = null;
                     break;
                 }
@@ -148,14 +167,17 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
             }
 
             if (!isGoal && currentJump.onGround()) {
+                // We have reached the current MeshNode
                 if (Math.abs(currentJump.getX() - x) <= 0.5 && Math.abs(currentJump.getZ() - z) <= 0.5 && Math.abs(currentJump.getY() - y) <= 0.5) {
                     if (currentJump.isStart() && targetNodeIndex == 0) {
+                        // TODO: does this make sense? Why would we do this?
                         return false;
                     }
 
                     log.info("Reached node " + targetNodeIndex + " at " + x + ", " + y + ", " + z);
                     break;
                 } else {
+                    // Check if we have reached another MeshNode instead
                     boolean found = false;
                     for (int i = targetNodeIndex + 1; i < Math.min(path.getPath().size() - 1, targetNodeIndex + 4); i++) {
                         MeshNode otherMeshNode = path.getPath().get(i);
@@ -174,11 +196,9 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
                         break;
                     }
                 }
-
-                // TODO: this does not prevent trying to break through ceiling to reach node underneath!
-                // TODO: optimize, check horizontalcollisions and try to optimize them away!
             }
 
+            // If we have moved away from our target node too many times it means we passed it and are running off in the wrong direction
             double distance = currentJump.distanceSq(x, y, z);
             if (distance > prevDistance) {
                 movedAwayCount++;
@@ -193,7 +213,8 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
 
             prevDistance = distance;
             tenthLast = tenthLast == null ? getIthLastNodeExceptCurrentMove(currentJump, 10) : tenthLast.next();
-            if (tenthLast != null && tenthLast.distanceSq(currentJump) <= 1.0) { // we have not moved away properly from last node
+            // If we have not moved away more than 1 block from the position we were in 10 movements ago, we are stuck
+            if (tenthLast != null && tenthLast.distanceSq(currentJump) <= 1.0) {
                 log.info("Got stuck on " + currentJump);
                 currentJump = null;
                 break;
@@ -201,17 +222,20 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
 
             // Vector we need to move towards the targeted MeshNode
             Vec3 delta = new Vec3(x - currentJump.getX(), 0.0, z - currentJump.getZ());
+            log.info("Delta: " + delta);
             boolean normalize = true;
             boolean strafeFall = false;
+            // We can move towards the target in just one tick
             if (delta.lengthSqr() <= Mth.square(phobot.getMovementService().getMovement().getSpeed(player))) {
-                if (isGoal || strafe && !currentJump.onGround() && Math.abs(currentJump.getY() - y) > 1.0) { // about to hit goal, or falling down
-                    normalize = false;
-                } else if (strafe && currentJump.onGround() && currentJump.getY() > y) { // avoids getting stuck on cc spawn
-                    strafeFall = true;
+                if (isGoal || strafe && !currentJump.onGround() && Math.abs(currentJump.getY() - y) > 1.0) {// about to hit goal, or falling down
+                    normalize = false; // just center us when falling down
+                } else if (strafe && currentJump.onGround() && currentJump.getY() > y) {// avoids getting stuck on cc spawn
+                    strafeFall = true; // TODO: kinda forgot what this was for... I assume is has something to do with falling down to the side of the spawn?
                 }
             }
 
             delta = normalize ? (strafe && !strafeFall ? delta.normalize() : initialDelta) : delta;
+            log.info("Delta after transform: " + delta + ", " + isGoal + ", distance to goal: " + currentJump.distance(goal) + ", " + currentJump.getY() + " vs " + goal.getY());
             lastJump = currentJump;
             currentJump = move(currentJump, targetNodeIndex, new Vec3(delta.x, player.getDeltaMovement().y, delta.z), strafe, normalize);
             if (firstJump == null) {
@@ -227,6 +251,7 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
             return true;
         }
 
+        log.info("Current Jump == null");
         return false;
     }
 
@@ -304,11 +329,16 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
             return state.getDelta();
         });
 
+        /*
+        Allows you to visualize what is happening
+
         try {
             Thread.sleep(50L);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+
+        */
 
         player.travel();
         Movement.State state = stateRef[0];

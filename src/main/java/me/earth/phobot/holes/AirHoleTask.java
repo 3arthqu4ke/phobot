@@ -4,11 +4,9 @@ import lombok.Getter;
 import lombok.Setter;
 import me.earth.phobot.invalidation.ChunkWorker;
 import me.earth.phobot.util.mutables.MutPos;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.chunk.LevelChunk;
 
 /**
  * Finds holes which could've been created when a block turned into air.

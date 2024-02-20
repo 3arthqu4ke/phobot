@@ -39,6 +39,7 @@ public class MovementParableTest {
 
             player.setPos(10.5, 1.0, 10.5);
             assertTrue(parable.canReach(player.position(), 8.5, 1, 8.5));
+            assertTrue(parable.canReach(player.position(), 8.5, -100, 8.5));
 
             assertFalse(parable.isOnParable(0.0, 0.0, 0.0, 0.287, 0.0, 0.0, 0.5, 0.1));
             assertTrue(parable.isOnParable(0.0, 0.0, 0.0, 0.287, 0.0, 0.0, 0.5, 0.5));
@@ -47,6 +48,7 @@ public class MovementParableTest {
                 assertTrue(parable.isOnParable(0.0, 0.0, 0.0, 0.0, parable.getVerticalValues()[i], parable.getHorizontalValues()[i], 0.0, 0.0));
             }
 
+            assertTrue(parable.isOnParable(0.0, 0.0, 0.0, 0.0, -1000, parable.getHorizontalValues()[parable.getHorizontalValues().length - 1], 0.0, 0.0));
             // TODO: more tests for isOnParable
         }
     }

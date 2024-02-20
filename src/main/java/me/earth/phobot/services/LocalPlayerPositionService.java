@@ -7,7 +7,6 @@ import me.earth.phobot.event.PostMotionPlayerUpdateEvent;
 import me.earth.phobot.util.ResetUtil;
 import me.earth.phobot.util.player.DamageCalculatorPlayer;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
-import me.earth.pingbypass.commons.event.SafeListener;
 import me.earth.pingbypass.commons.event.network.PacketEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;

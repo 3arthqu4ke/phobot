@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import me.earth.phobot.holes.HoleManager;
 import me.earth.phobot.modules.client.anticheat.AntiCheat;
 import me.earth.phobot.pathfinder.Pathfinder;
-import me.earth.phobot.pathfinder.algorithm.Algorithm;
-import me.earth.phobot.pathfinder.algorithm.AlgorithmRenderer;
 import me.earth.phobot.pathfinder.mesh.NavigationMeshManager;
 import me.earth.phobot.services.*;
 import me.earth.phobot.services.inventory.InventoryService;

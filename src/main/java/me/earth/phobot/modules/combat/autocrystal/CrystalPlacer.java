@@ -21,6 +21,10 @@ import java.util.List;
 // TODO: revisiting this code to add crystal rotations I realize how shitty to maintain this is!!!
 //  even though the BlockPlacer was supposed to help with redundant code this is awful.
 //  but crystal rotations are hopefully the last thing to add.
+/**
+ * Handles the placing of {@link CrystalPosition}s. The actual logic happens in {@link CrystalPlacingAction}.
+ * This class prepares those Actions and handles placing Obsidian blocks of {@link CrystalPosition#isObsidian()} is {@code true}.
+ */
 @Slf4j
 @Getter
 @RequiredArgsConstructor
@@ -47,17 +51,21 @@ public class CrystalPlacer {
             return null;
         }
 
+        // position requires us to place blocks
         if (pos.isObsidian()) {
             List<BlockPos> path = pos.getPath();
             if (path == null) {
                 return null;
             }
 
+            // get the BlockPlacer of the module, this could be the global Phobot BlockPlacer, or a different one if we are not on the mainthread.
             BlockPlacer placer = module.getBlockPlacer();
             synchronized (placer) {
+                // We are in PreMotionPlayerUpdateEvent
                 if (placer.isInTick()) { // to be safe also check if we are on the same thread? Having InventoryContext should ensure locking tho
                     BlockPlacer.Action currentAction = null;
                     boolean crystalWasNull = placer.getCrystal() == null;
+                    // Try to place all the required Obsidian Blocks
                     for (int i = 1; i < path.size(); i++) {
                         BlockPos obbyPos = path.get(i);
                         BlockPlacer.Action placeAction = module.placeAction(obbyPos, Blocks.OBSIDIAN, player, level);
@@ -73,12 +81,16 @@ public class CrystalPlacer {
                         }
                     }
 
+                    // We have placed all the required Obsidian Blocks, add CrystalPlacingAction to the placer
                     CrystalPlacingAction crystalPlacingAction = action(pos, packetRotations);
                     updateDependencies(crystalPlacingAction, currentAction);
                     placer.getActions().add(crystalPlacingAction);
                     return crystalPlacingAction;
                 } else {
+                    // We are not in PreMotionPlayerUpdateEvent, we have to start the placer ourselves, maybe on a different Thread.
+                    // This is semi safe, because we have the InventoryContext, and with that, a lock on Phobot block placing.
                     placer.startTick(player, level);
+                    // place all the blocks
                     for (int i = 1; i < path.size(); i++) {
                         BlockPos obbyPos = path.get(i);
                         if (!module.placePos(obbyPos, Blocks.OBSIDIAN, player, level)) {
@@ -88,18 +100,22 @@ public class CrystalPlacer {
                             return null;
                         }
                     }
-
+                    // execute all of the place actions
                     placer.endTick(context, player, level);
                     if (placer.isCompleted()) {
+                        // success, place CrystalPlacingAction
+                        // TODO: why is the CrystalPlacingAction not added to the BlockPlacer too?!
                         BlockStateLevel.Delegating delegating = new BlockStateLevel.Delegating(level);
                         delegating.getMap().put(pos, Blocks.OBSIDIAN.defaultBlockState());
                         CrystalPlacingAction crystalPlacingAction = action(pos, packetRotations);
                         crystalPlacingAction.execute(Collections.emptySet(), context, player, delegating);
                         return crystalPlacingAction;
                     } else {
+                        // We failed, this could be because we need to place multiple Obsidian Blocks and we need to rotate for each one
+                        // Set the modules ObbyPos to try again later
                         CrystalPosition copy = pos.copy();
                         copy.setObbyTries(pos.getObbyTries() + 1);
-                        if (copy.getObbyTries() <= path.size()) {
+                        if (copy.getObbyTries() <= path.size()) { // TODO: +1 for CrystalPlacingAction?
                             module.obbyPos(copy);
                         }
 
@@ -108,7 +124,7 @@ public class CrystalPlacer {
                 }
             }
         }
-
+        // Actual CrystalPlacement logic happens here
         CrystalPlacingAction crystalPlacingAction = action(pos, packetRotations);
         crystalPlacingAction.execute(Collections.emptySet(), context, player, level);
         return crystalPlacingAction;

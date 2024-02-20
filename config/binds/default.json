@@ -1,0 +1,235 @@
+{
+  "AccountSpoof": {
+    "Bind": []
+  },
+  "AntiCheat": {
+    "Bind": []
+  },
+  "AutoConnect": {
+    "Bind": []
+  },
+  "AutoCrystal": {
+    "Bind": [
+      {
+        "name": "R",
+        "type": "KEYBOARD",
+        "code": 82
+      }
+    ],
+    "FacePlaceBind": [
+      {
+        "name": "MOUSE_1",
+        "type": "MOUSE",
+        "code": 0
+      }
+    ]
+  },
+  "AutoEat": {
+    "Bind": []
+  },
+  "AutoEchest": {
+    "Bind": [
+      {
+        "name": "K",
+        "type": "KEYBOARD",
+        "code": 75
+      }
+    ]
+  },
+  "AutoKit": {
+    "Bind": []
+  },
+  "AutoMine": {
+    "Bind": [
+      {
+        "name": "G",
+        "type": "KEYBOARD",
+        "code": 71
+      }
+    ]
+  },
+  "AutoRespawn": {
+    "Bind": []
+  },
+  "AutoTotem": {
+    "Bind": []
+  },
+  "AutoTrap": {
+    "Bind": [
+      {
+        "name": "Y",
+        "type": "KEYBOARD",
+        "code": 90
+      }
+    ]
+  },
+  "Blocker": {
+    "Bind": []
+  },
+  "Bomber": {
+    "Bind": [
+      {
+        "name": "J",
+        "type": "KEYBOARD",
+        "code": 74
+      }
+    ]
+  },
+  "Criticals": {
+    "Bind": []
+  },
+  "Debug": {
+    "Bind": []
+  },
+  "FakePlayer": {
+    "Bind": [
+      {
+        "name": "M",
+        "type": "KEYBOARD",
+        "code": 77
+      }
+    ]
+  },
+  "FastFall": {
+    "Bind": []
+  },
+  "Fullbright": {
+    "Bind": []
+  },
+  "HitboxDesync": {
+    "Bind": []
+  },
+  "HoleFiller": {
+    "Bind": [
+      {
+        "name": "LEFT_ALT",
+        "type": "KEYBOARD",
+        "code": 342
+      }
+    ]
+  },
+  "Holes": {
+    "Bind": []
+  },
+  "KillAura": {
+    "Bind": []
+  },
+  "Logger": {
+    "Bind": []
+  },
+  "NoInterp": {
+    "Bind": []
+  },
+  "NoRender": {
+    "Bind": []
+  },
+  "NoSlowDown": {
+    "Bind": []
+  },
+  "Notifications": {
+    "Bind": []
+  },
+  "Packets": {
+    "Bind": []
+  },
+  "PacketSpam": {
+    "Bind": []
+  },
+  "Pathfinding": {
+    "Bind": []
+  },
+  "Potions": {
+    "Bind": []
+  },
+  "Reach": {
+    "Bind": []
+  },
+  "Repair": {
+    "Bind": []
+  },
+  "Replenish": {
+    "Bind": []
+  },
+  "Rotate": {
+    "Bind": []
+  },
+  "Scaffold": {
+    "Bind": [
+      {
+        "name": "I",
+        "type": "KEYBOARD",
+        "code": 73
+      }
+    ]
+  },
+  "SelfTrap": {
+    "Bind": []
+  },
+  "Speed": {
+    "Bind": [
+      {
+        "name": "T",
+        "type": "KEYBOARD",
+        "code": 84
+      }
+    ]
+  },
+  "Speedmine": {
+    "Bind": []
+  },
+  "Sprint": {
+    "Bind": []
+  },
+  "Step": {
+    "Bind": [
+      {
+        "name": "Z",
+        "type": "KEYBOARD",
+        "code": 89
+      }
+    ]
+  },
+  "Stop": {
+    "Bind": [
+      {
+        "name": "C",
+        "type": "KEYBOARD",
+        "code": 67
+      }
+    ]
+  },
+  "Strafe": {
+    "Bind": []
+  },
+  "Suicide": {
+    "Bind": [
+      {
+        "name": "N",
+        "type": "KEYBOARD",
+        "code": 78
+      }
+    ],
+    "FacePlaceBind": []
+  },
+  "Surround": {
+    "Bind": [
+      {
+        "name": "TAB",
+        "type": "KEYBOARD",
+        "code": 258
+      }
+    ]
+  },
+  "Swing": {
+    "Bind": []
+  },
+  "Timer": {
+    "Bind": []
+  },
+  "Velocity": {
+    "Bind": []
+  },
+  "XCarry": {
+    "Bind": []
+  }
+}

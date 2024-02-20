@@ -11,7 +11,6 @@ import me.earth.phobot.modules.combat.autocrystal.AutoCrystal;
 import me.earth.phobot.modules.misc.*;
 import me.earth.phobot.modules.movement.*;
 import me.earth.phobot.pathfinder.Pathfinder;
-import me.earth.phobot.pathfinder.algorithm.AlgorithmRenderer;
 import me.earth.phobot.pathfinder.mesh.NavigationMeshManager;
 import me.earth.phobot.services.*;
 import me.earth.phobot.services.inventory.InventoryService;

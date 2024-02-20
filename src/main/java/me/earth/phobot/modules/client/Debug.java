@@ -1,5 +1,6 @@
 package me.earth.phobot.modules.client;
 
+import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
 import me.earth.phobot.ducks.IAbstractClientPlayer;
 import me.earth.phobot.event.LocalPlayerRenderEvent;
@@ -14,7 +15,6 @@ import me.earth.phobot.util.math.PositionUtil;
 import me.earth.phobot.util.player.PredictionPlayer;
 import me.earth.phobot.util.render.Renderer;
 import me.earth.phobot.util.time.TimeUtil;
-import me.earth.phobot.util.world.BlockStateLevel;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
@@ -29,14 +29,17 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.awt.*;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import static me.earth.phobot.services.PlayerPredictionService.DISTANCE_SQUARED;
 
+@Slf4j
 public class Debug extends PhobotModule {
     private final Setting<Boolean> renderBreak = bool("Break", false, "Renders a break ESP for blocks that get broken around us.");
     private final Setting<Boolean> renderPrediction = bool("Prediction", false, "Renders the predicted path for all players around us.");
@@ -139,27 +142,53 @@ public class Debug extends PhobotModule {
 
     @Override
     protected void onEnable() {
-        ClientLevel level = mc.level;
-        if (level != null) {
-            StringBuilder builder = new StringBuilder();
-            for (int x = -6; x < 6; x++) {
-                for (int z = -6; z < 6; z++) {
-                    for (int y = 0; y < 140; y++) {
-                        if (y > 5 && y < 120) {
-                            continue;
-                        }
+        dumpWorld();
+    }
 
-                        BlockPos pos = new BlockPos(x, y, z);
+    @SuppressWarnings("unused")
+    private void dumpWorld() {
+        ClientLevel level = mc.level;
+        LocalPlayer player = mc.player;
+        if (player != null && level != null) {
+            StringBuilder builder = new StringBuilder();
+            builder.append("[\n");
+            boolean first = true;
+            for (int x = -10; x < 10; x++) {
+                for (int y = -10; y < 10; y++) {
+                    for (int z = -10; z < 10; z++) {
+                        BlockPos pos = player.getOnPos().offset(x, y, z);
                         BlockState state = level.getBlockState(pos);
-                        if (!state.isAir() && !state.is(Blocks.OBSIDIAN)) {
-                            builder.append("level.getMap().put(new BlockPos(").append(x).append(", ").append(y).append(", ").append(z)
-                                   .append("), Blocks.").append(state.getBlock().getDescriptionId().toUpperCase().replace("BLOCK.MINECRAFT.", "")).append(".defaultBlockState());\n");
+                        if (!state.isAir()) {
+                            var key = state.getBlockHolder().unwrapKey();
+                            if (key.isPresent()) {
+                                if (first) {
+                                    builder.append("{ ");
+                                    first = false;
+                                } else {
+                                    builder.append(",\n{ ");
+                                }
+
+                                builder.append(" \"x\": ")
+                                       .append(x)
+                                       .append(", \"y\": ")
+                                       .append(y)
+                                       .append(", \"z\": ")
+                                       .append(z)
+                                       .append(", \"block\": \"")
+                                       .append(key.get().location())
+                                       .append("\" }");
+                            }
                         }
                     }
                 }
             }
 
-            System.out.println(builder);
+            builder.append("\n]");
+            try (FileOutputStream fos = new FileOutputStream("worlddump.json")) {
+                fos.write(builder.toString().getBytes(StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                log.error("Failed to save world dump", e);
+            }
         }
     }
 

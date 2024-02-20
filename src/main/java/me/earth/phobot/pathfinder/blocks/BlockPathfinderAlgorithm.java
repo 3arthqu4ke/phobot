@@ -1,7 +1,6 @@
 package me.earth.phobot.pathfinder.blocks;
 
 import me.earth.phobot.pathfinder.algorithm.Dijkstra;
-import me.earth.phobot.pathfinder.util.Cancellation;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 

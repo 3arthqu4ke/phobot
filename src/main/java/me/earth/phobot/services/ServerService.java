@@ -6,7 +6,6 @@ import me.earth.phobot.event.ConnectEvent;
 import me.earth.pingbypass.api.event.SubscriberImpl;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.commons.event.network.PacketEvent;
-import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.network.protocol.handshake.ClientIntent;
 import net.minecraft.network.protocol.handshake.ClientIntentionPacket;
 import org.jetbrains.annotations.Unmodifiable;

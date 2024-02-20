@@ -1,7 +1,6 @@
 package me.earth.phobot.util.math;
 
 import lombok.experimental.UtilityClass;
-import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
 import java.math.BigDecimal;

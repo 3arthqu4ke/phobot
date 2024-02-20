@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import me.earth.phobot.invalidation.ChunkWorker;
 import me.earth.phobot.util.mutables.MutPos;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.util.thread.BlockableEventLoop;

@@ -26,6 +26,11 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
 
+/**
+ * Contains the logic for placing a crystal.
+ * This is similar to a {@link BlockPlacer.Action},
+ * but for placing a crystal we can hit any part of the block so we can be a bit more lenient than when placing blocks.
+ */
 @Getter
 public class CrystalPlacingAction extends BlockPlacer.Action {
     private final CrystalPlacingModule module;
@@ -71,13 +76,15 @@ public class CrystalPlacingAction extends BlockPlacer.Action {
         }
 
         boolean packetRotate = false;
-        if (hitResult.rotations != null) {
+        if (hitResult.rotations != null) { // We need to rotate
             if (isPacketRotations() && !getBlockPlacer().getMotionUpdateService().isInPreUpdate()) {
-                packetRotate = true;
+                packetRotate = true; // We can just send a packet for rotations
             } else {
                 if (phobot.getMinecraft().isSameThread()
                         && !getBlockPlacer().getMotionUpdateService().isSpoofing()
                         && getBlockPlacer().getMotionUpdateService().isInPreUpdate()) {
+                    // We are on the mainthread an in PreMotionPlayerUpdate, we can spoof our rotations
+                    // Then this.execute will be called again and we should be rotated correctly
                     getBlockPlacer().getMotionUpdateService().rotate(player, hitResult.rotations[0], hitResult.rotations[1]);
                 } else {
                     failedDueToRotations = true;
@@ -86,18 +93,18 @@ public class CrystalPlacingAction extends BlockPlacer.Action {
                 return false;
             }
         }
-
+        // switch to end crystals
         InventoryContext.SwitchResult switchResult = context.switchTo(Items.END_CRYSTAL, InventoryContext.DEFAULT_SWAP_SWITCH);
         if (switchResult == null) {
             return false;
         }
 
-        if (packetRotate) {
+        if (packetRotate) { // send rotation packet
             player.connection.send(new ServerboundMovePlayerPacket.Rot(hitResult.rotations[0], hitResult.rotations[1], player.onGround()));
         }
-
+        // Update our CrystalPlacingModule
         handleModule(pos);
-        // TODO: hitresult is offf
+        // Send placement packet
         ServerboundUseItemOnPacket packet = new ServerboundUseItemOnPacket(switchResult.hand(), hitResult.result, 0);
         player.connection.send(packet);
         player.connection.send(new ServerboundSwingPacket(switchResult.hand()));
@@ -115,6 +122,7 @@ public class CrystalPlacingAction extends BlockPlacer.Action {
 
     // TODO: build height!!!
     private @Nullable HitResult getHitResult(BlockPos immutable, LocalPlayer player, ClientLevel level) {
+        // Get prepared world where potentially prepared obsidian blocks are already placed
         BlockStateLevel.Delegating stateLevel = getStateLevel(level);
 
         float[] rotations = null;
@@ -134,7 +142,7 @@ public class CrystalPlacingAction extends BlockPlacer.Action {
                     // first check if direction.up is ok, because we really like up, because if we rotate for up, we also are rotated on the crystal
                     if (!phobot.getAntiCheat().getCrystalStrictDirectionCheck().strictDirectionCheck(immutable, dir, stateLevel, player)) {
                         dir = phobot.getAntiCheat().getCrystalStrictDirectionCheck().getStrictDirection(immutable, player, stateLevel);
-                        if (dir == null) {
+                        if (dir == null) { // We cannot see any faces of the block
                             return null;
                         }
                     }
@@ -146,18 +154,15 @@ public class CrystalPlacingAction extends BlockPlacer.Action {
             }
         } else if (phobot.getAntiCheat().getCrystalStrictDirection().getValue() != StrictDirection.Type.Vanilla) { // We have to target a direction we can see
             Direction dir = phobot.getAntiCheat().getCrystalStrictDirectionCheck().getStrictDirection(immutable, rotationPlayer, stateLevel);
-            if (dir == null) {
+            if (dir == null) { // We cannot see any faces of the block
                 return null;
             }
 
             Vec3 vec = getOffset(immutable, dir);
             hitResult = new BlockHitResult(vec, dir, immutable, false);
         } else { // do whatever
+            // TODO: meh, not very legit, should actually be UP, but build height, bla bla
             hitResult = new BlockHitResult(new Vec3(immutable.getX() + 0.5, immutable.getY(), immutable.getZ() + 0.5), Direction.DOWN, immutable, false);
-        }
-
-        if (hitResult != null && !hitResult.getBlockPos().equals(immutable)) {
-            throw new IllegalStateException();
         }
 
         return new HitResult(hitResult, rotations);

@@ -23,7 +23,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.login.ServerboundHelloPacket;
 import org.apache.commons.lang3.mutable.MutableObject;
 
-import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 

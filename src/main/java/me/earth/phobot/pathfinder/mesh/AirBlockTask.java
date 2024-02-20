@@ -2,7 +2,6 @@ package me.earth.phobot.pathfinder.mesh;
 
 import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.invalidation.ChunkWorker;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.util.thread.BlockableEventLoop;

@@ -18,7 +18,6 @@ import net.minecraft.world.level.block.Blocks;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
-import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -39,26 +38,19 @@ public class NavigationMeshManagerTest {
     }
 
     public static NavigationMeshManager createNavigationMeshManager() {
+        return createNavigationMeshManager(0);
+    }
+
+    public static NavigationMeshManager createNavigationMeshManager(int minHeight) {
         Phobot phobot = TestPhobot.PHOBOT;
         Pathfinding module = new Pathfinding(phobot.getPingBypass(), phobot.getExecutorService());
+        module.getSetting("MinHeight", Integer.class).ifPresent(s -> s.setValue(minHeight));
         module.getCalcAsync().setValue(false);
         return new NavigationMeshManager(module, new BunnyHopCC(), new HashMap<>(), new XZMap<>(new HashMap<>()));
     }
 
     public static BlockStateLevel.Delegating setupLevel(ClientLevel clientLevel) {
-        return setupLevel(clientLevel, NavigationMeshManagerTest::setupBlockStateLevel);
-    }
-
-    public static BlockStateLevel.Delegating setupLevel(ClientLevel clientLevel, Consumer<BlockStateLevel.Delegating> consumer) {
-        BlockStateLevel.Delegating level = new BlockStateLevel.Delegating(clientLevel) {
-            @Override
-            public boolean hasChunkAt(BlockPos pos) {
-                return true;
-            }
-        };
-
-        consumer.accept(level);
-        return level;
+        return TestUtil.setupLevel(clientLevel, NavigationMeshManagerTest::setupBlockStateLevel);
     }
 
     public static void setupBlockStateLevel(BlockStateLevel.Delegating level) {
@@ -80,8 +72,12 @@ public class NavigationMeshManagerTest {
     }
 
     public static void setupMesh(BlockStateLevel.Delegating level, int maxY, NavigationMeshManager navigationMeshManager) {
+        setupMesh(level, -1, maxY, navigationMeshManager);
+    }
+
+    public static void setupMesh(BlockStateLevel.Delegating level, int minY, int maxY, NavigationMeshManager navigationMeshManager) {
         BlockableEventLoop<Runnable> eventLoop = new BlockableEventLoopImpl();
-        MeshTask task = new MeshTask(navigationMeshManager.getMap(), eventLoop, level, new MutPos(), navigationMeshManager, new ChunkWorker(), -21, 21, -1, maxY, -21, 21);
+        MeshTask task = new MeshTask(navigationMeshManager.getMap(), eventLoop, level, new MutPos(), navigationMeshManager, new ChunkWorker(), -21, 21, minY, maxY, -21, 21);
         task.run();
     }
 

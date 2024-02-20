@@ -9,7 +9,6 @@ import me.earth.phobot.pathfinder.mesh.MeshNode;
 import me.earth.phobot.pathfinder.mesh.NavigationMeshManager;
 import me.earth.phobot.pathfinder.mesh.NavigationMeshManagerTest;
 import me.earth.phobot.pathfinder.util.Cancellation;
-import net.minecraft.advancements.critereon.LightningStrikeTrigger;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
