@@ -24,11 +24,6 @@ public class AutoTotem extends PhobotModule {
     private final Setting<Boolean> invincibilityFrames = bool("InvincibilityFrames", false, "Makes use of Invincibility Frames.");
     private final Setting<Boolean> gap = bool("Sword-Gap", false, "Right click with a sword in your hand to eat a gap.");
     private final SurroundService surroundService;
-    private enum Offhand {
-        None,
-        Totem,
-        Crystal
-    }
     public AutoTotem(Phobot phobot, Suicide suicide, SurroundService surroundService) {
         super(phobot, "AutoTotem", Categories.COMBAT, "Prevents you from dying by using Totems.");
         this.surroundService = surroundService;
@@ -70,15 +65,18 @@ public class AutoTotem extends PhobotModule {
             }
         });
     }
-
     private boolean isSafe(LocalPlayer player) {
         return surroundService.isSurrounded()
                 || invincibilityFrames.getValue() && !phobot.getInvincibilityFrameService().willDamageKill(player, phobot.getDamageService().getHighestDamage(), 400);
     }
-
     private void offhand(InventoryContext context, Item item) {
         if (!context.getOffhand().getItem().is(item)) {
             context.switchTo(item, InventoryContext.DEFAULT_SWAP_SWITCH);
         }
+    }
+    private enum Offhand {
+        None,
+        Totem,
+        Crystal
     }
 }
