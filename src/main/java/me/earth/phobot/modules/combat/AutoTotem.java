@@ -19,7 +19,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.SwordItem;
 
-
 public class AutoTotem extends PhobotModule {
     private final Setting<Offhand> mode = constant("Mode", Offhand.None, "What item you prefer in your offhand.");
     private final Setting<Boolean> invincibilityFrames = bool("InvincibilityFrames", false, "Makes use of Invincibility Frames.");
