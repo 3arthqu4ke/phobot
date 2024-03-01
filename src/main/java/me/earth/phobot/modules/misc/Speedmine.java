@@ -168,7 +168,11 @@ public class Speedmine extends PhobotModule {
                     return;
                 }
 
-                event.setCancelled(true);
+               if (currentPos != null) {
+                    if (Objects.equals(event.getPos(), currentPos)) {
+                        event.setCancelled(true);
+                    }
+                }
             }
         });
 
