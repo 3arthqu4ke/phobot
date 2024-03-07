@@ -6,8 +6,8 @@ import me.earth.phobot.event.ChangeWorldEvent;
 import me.earth.phobot.event.UnloadChunkEvent;
 import me.earth.phobot.util.mutables.MutPos;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
-import me.earth.pingbypass.commons.event.network.PacketEvent;
-import me.earth.pingbypass.commons.event.network.PostListener;
+import me.earth.pingbypass.api.event.network.PacketEvent;
+import me.earth.pingbypass.api.event.network.PostListener;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -112,7 +112,7 @@ public abstract class AbstractInvalidationManager<T extends CanBeInvalidated, C 
     }
 
     protected void onBlockStateChange(BlockPos pos, BlockState state, ChunkWorker worker, LevelChunk chunk) {
-        addInvalidateTask(pos, state, worker);
+        addInvalidateTask(chunk, pos, state, worker);
         if (callbacks == null) {
             addPostWorkingTask(pos, state, worker, chunk);
         } else {
@@ -120,12 +120,12 @@ public abstract class AbstractInvalidationManager<T extends CanBeInvalidated, C 
         }
     }
 
-    protected void addInvalidateTask(BlockPos pos, BlockState state, ChunkWorker worker) {
+    protected void addInvalidateTask(LevelChunk chunk, BlockPos pos, BlockState state, ChunkWorker worker) {
         worker.addTask(() -> {
             mutPos.setX(pos.getX());
             mutPos.setY(pos.getY());
             mutPos.setZ(pos.getZ());
-            invalidate(mutPos, state, worker);
+            invalidate(chunk, mutPos, state, worker);
         });
     }
 
@@ -135,7 +135,7 @@ public abstract class AbstractInvalidationManager<T extends CanBeInvalidated, C 
 
     protected abstract void addPostWorkingTask(BlockPos pos, BlockState state, ChunkWorker worker, LevelChunk chunk);
 
-    protected abstract void invalidate(MutPos pos, BlockState state, ChunkWorker chunk);
+    protected abstract void invalidate(LevelChunk chunk, MutPos pos, BlockState state, ChunkWorker worker);
 
     // TODO: with the XZMap this can happen much more efficiently!
     protected void removeInvalids(LevelChunk chunk) {

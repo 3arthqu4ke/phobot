@@ -4,8 +4,15 @@ import me.earth.phobot.pathfinder.util.Cancellation;
 import me.earth.phobot.pathfinder.util.OpenSet;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeSet;
 
+/**
+ * An implementation of Dijkstra's algorithm for {@link PathfindingNode}s.
+ * @param <N> the type of node to use for pathfinding.
+ */
 public class Dijkstra<N extends PathfindingNode<N>> extends Algorithm<N> {
     protected final Map<N, Double> gScore = new HashMap<>();
 
@@ -14,7 +21,7 @@ public class Dijkstra<N extends PathfindingNode<N>> extends Algorithm<N> {
     }
 
     @Override
-    public @Nullable List<N> run(Cancellation cancellation) {
+    public @Nullable Algorithm.Result<N> run(Cancellation cancellation) {
         gScore.put(start, 0.0);
         return super.run(cancellation);
     }

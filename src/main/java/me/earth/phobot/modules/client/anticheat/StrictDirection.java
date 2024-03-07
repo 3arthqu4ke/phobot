@@ -14,7 +14,8 @@ public interface StrictDirection {
     enum Type {
         Vanilla,
         NCP,
-        Grim
+        Grim,
+        Combined
         // TODO: I think cc uses both, so we might need a combined AntiCheat?
     }
 

@@ -1,5 +1,6 @@
 package me.earth.phobot.mixins.network;
 
+import me.earth.phobot.event.LagbackEvent;
 import me.earth.phobot.event.LocalPlayerDeathEvent;
 import me.earth.phobot.event.SetEquipmentEvent;
 import me.earth.phobot.event.TotemPopEvent;
@@ -8,9 +9,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.CommonListenerCookie;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerCombatKillPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -38,7 +41,10 @@ public abstract class MixinClientPacketListener extends ClientCommonPacketListen
         method = "handlePlayerCombatKill",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;shouldShowDeathScreen()Z", shift = At.Shift.BEFORE))
     private void handlePlayerCombatKillHook(ClientboundPlayerCombatKillPacket clientboundPlayerCombatKillPacket, CallbackInfo ci) {
-        PingBypassApi.getEventBus().post(new LocalPlayerDeathEvent(minecraft.player));
+        LocalPlayer player = minecraft.player;
+        if (player != null) {
+            PingBypassApi.getEventBus().post(new LocalPlayerDeathEvent(minecraft.player));
+        }
     }
 
     @Inject(
@@ -51,6 +57,11 @@ public abstract class MixinClientPacketListener extends ClientCommonPacketListen
         locals = LocalCapture.CAPTURE_FAILHARD)
     private void handleSetEquipmentHook(ClientboundSetEquipmentPacket packet, CallbackInfo ci, Entity entity) {
         PingBypassApi.getEventBus().post(new SetEquipmentEvent(packet, entity));
+    }
+
+    @Inject(method = "handleMovePlayer", at = @At("RETURN"))
+    private void handleMovePlayerHook(ClientboundPlayerPositionPacket clientboundPlayerPositionPacket, CallbackInfo ci) {
+        PingBypassApi.getEventBus().post(new LagbackEvent());
     }
 
 }

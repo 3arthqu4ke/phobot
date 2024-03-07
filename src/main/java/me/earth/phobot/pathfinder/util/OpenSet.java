@@ -1,10 +1,16 @@
 package me.earth.phobot.pathfinder.util;
 
+import me.earth.phobot.pathfinder.algorithm.Algorithm;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.SortedSet;
 
-// TODO: I have not yet achieved good results with a binary heap but maybe I am not seeing something
+// TODO: main issue with a binary heap is that to make updating fast, each element needs to hold a reference of the index its stored at.
+//  That makes parallel pathfinding on the same MeshNodes problematic.
+/**
+ * The OpenSet used by {@link Algorithm}s.
+ * @param <N> the type of elements in this set.
+ */
 public interface OpenSet<N> {
     @Nullable N removeFirst();
 

@@ -5,7 +5,7 @@ import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.module.impl.ModuleImpl;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.commons.event.network.PacketEvent;
+import me.earth.pingbypass.api.event.network.PacketEvent;
 import net.minecraft.network.protocol.common.*;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 

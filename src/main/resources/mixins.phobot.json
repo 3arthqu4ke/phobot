@@ -10,6 +10,7 @@
     "MixinMinecraft",
     "MixinOptions",
     "entity.ILivingEntity",
+    "entity.IPlayer",
     "entity.MixinAbstractClientPlayer",
     "entity.MixinEntity",
     "entity.MixinInventory",
@@ -32,8 +33,10 @@
     "network.MixinPacketEncoder",
     "network.MixinServerboundInteractPacket",
     "network.MixinServerboundSwingPacket",
+    "pingbypass.MixinInitializationService",
     "render.MixinEntityRenderDispatcher",
     "render.MixinLevelRenderer",
+    "render.MixinSkylightEngine",
     "screen.IDisconnectScreen",
     "screen.MixinAbstractContainerScreen",
     "screen.MixinConnectScreen",
@@ -45,6 +48,10 @@
   "client": [
     "entity.ILocalPlayer",
     "level.MixinClientLevel",
-    "render.MixinLivingEntityRenderer"
+    "render.MixinCamera",
+    "render.MixinGameRenderer",
+    "render.MixinLightTexture",
+    "render.MixinLivingEntityRenderer",
+    "render.MixinScreenEffectRenderer"
   ]
 }

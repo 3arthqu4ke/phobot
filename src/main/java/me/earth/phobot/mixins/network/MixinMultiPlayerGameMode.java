@@ -5,7 +5,7 @@ import me.earth.phobot.event.StartDestroyBlockEvent;
 import me.earth.phobot.event.StopDestroyBlockEvent;
 import me.earth.phobot.modules.misc.Reach;
 import me.earth.pingbypass.PingBypassApi;
-import me.earth.pingbypass.commons.util.mixin.MixinHelper;
+import me.earth.pingbypass.api.util.mixin.MixinHelper;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;

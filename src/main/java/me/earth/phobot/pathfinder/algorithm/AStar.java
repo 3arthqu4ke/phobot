@@ -4,8 +4,15 @@ import me.earth.phobot.pathfinder.util.Cancellation;
 import me.earth.phobot.pathfinder.util.OpenSet;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeSet;
 
+/**
+ * An implementation of the A-Star algorithm for {@link PathfindingNode}s.
+ * @param <N> the type of node to use for pathfinding.
+ */
 public class AStar<N extends PathfindingNode<N>> extends Dijkstra<N> {
     protected final Map<N, Double> fScore = new HashMap<>();
 
@@ -14,7 +21,7 @@ public class AStar<N extends PathfindingNode<N>> extends Dijkstra<N> {
     }
 
     @Override
-    public @Nullable List<N> run(Cancellation cancellation) {
+    public @Nullable Algorithm.Result<N> run(Cancellation cancellation) {
         fScore.put(start, heuristic(goal, start));
         return super.run(cancellation);
     }

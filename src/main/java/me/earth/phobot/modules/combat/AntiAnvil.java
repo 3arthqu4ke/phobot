@@ -38,7 +38,7 @@ public class AntiAnvil extends BlockPlacingModule implements TrapsPlayers {
 
     @Override
     protected void updatePlacements(InventoryContext context, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
-        if (!surroundService.isSurrounded(player)) {
+        if (!surroundService.isSurrounded()) {
             return;
         }
 

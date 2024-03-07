@@ -14,6 +14,9 @@ import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Uses a {@link BlockPathfinder} to find the shortest path to a certain {@link BlockPos}.
+ */
 public interface FindsShortestPath extends ChecksBlockPlacingValidity {
     BlockPathfinder getBlockPathfinder();
 

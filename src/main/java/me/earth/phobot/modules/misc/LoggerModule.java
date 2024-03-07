@@ -14,7 +14,7 @@ import me.earth.pingbypass.api.setting.Setting;
 import me.earth.pingbypass.api.setting.impl.types.container.Container;
 import me.earth.pingbypass.api.setting.impl.types.container.ContainerSetting;
 import me.earth.pingbypass.api.traits.Nameable;
-import me.earth.pingbypass.commons.event.network.PacketEvent;
+import me.earth.pingbypass.api.event.network.PacketEvent;
 import net.minecraft.network.Connection;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.network.FriendlyByteBuf;

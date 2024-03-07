@@ -1,7 +1,7 @@
 package me.earth.phobot.commands;
 
 import me.earth.phobot.Phobot;
-import me.earth.pingbypass.commons.command.AbstractPbCommand;
+import me.earth.pingbypass.api.command.AbstractPbCommand;
 
 public abstract class AbstractPhobotCommand extends AbstractPbCommand {
     protected final Phobot phobot;

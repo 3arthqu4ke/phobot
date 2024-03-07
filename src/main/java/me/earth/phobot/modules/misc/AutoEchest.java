@@ -44,7 +44,7 @@ public class AutoEchest extends BlockPlacingModule {
             return;
         }
 
-        if (!surroundService.isSurrounded() || autoMine.getCurrentPosition() != null && autoMine.isCurrentPositionValid() || !context.has(Blocks.ENDER_CHEST.asItem())) {
+        if (!surroundService.isSurrounded() || !context.has(Blocks.ENDER_CHEST.asItem())) {
             return;
         }
 

@@ -16,7 +16,7 @@ import me.earth.phobot.util.math.RotationUtil;
 import me.earth.phobot.util.world.BlockStateLevel;
 import me.earth.phobot.util.world.PredictionUtil;
 import me.earth.pingbypass.api.event.SubscriberImpl;
-import me.earth.pingbypass.commons.event.SafeListener;
+import me.earth.pingbypass.api.event.SafeListener;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;

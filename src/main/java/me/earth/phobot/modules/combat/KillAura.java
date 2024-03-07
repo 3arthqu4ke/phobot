@@ -17,7 +17,7 @@ import me.earth.phobot.util.player.MovementPlayer;
 import me.earth.pingbypass.api.gui.hud.DisplaysHudInfo;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.commons.event.SafeListener;
+import me.earth.pingbypass.api.event.SafeListener;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -136,7 +136,7 @@ public class KillAura extends PhobotModule implements DisplaysHudInfo {
         attacked = true;
     }
 
-    private @Nullable Target computeTarget(LocalPlayer player, ClientLevel level) {
+    public @Nullable Target computeTarget(LocalPlayer player, ClientLevel level) {
         Target result = null;
         MovementPlayer teleportPlayer = null;
         for (Entity entity : level.getEntities(null, PositionUtil.getAABBOfRadius(player, 8.0))) {

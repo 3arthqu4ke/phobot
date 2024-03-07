@@ -5,9 +5,9 @@ import me.earth.phobot.event.MoveEvent;
 import me.earth.phobot.modules.PhobotModule;
 import me.earth.phobot.movement.Movement;
 import me.earth.pingbypass.api.module.impl.Categories;
-import me.earth.pingbypass.commons.event.SafeListener;
-import me.earth.pingbypass.commons.event.loop.TickEvent;
-import me.earth.pingbypass.commons.event.network.ReceiveListener;
+import me.earth.pingbypass.api.event.SafeListener;
+import me.earth.pingbypass.api.event.loop.TickEvent;
+import me.earth.pingbypass.api.event.network.ReceiveListener;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -22,6 +22,10 @@ public class Speed extends PhobotModule {
         listen(new SafeListener<MoveEvent>(mc) {
             @Override
             public void onEvent(MoveEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
+                if (phobot.getPathfinder().isFollowingPath()) {
+                    return;
+                }
+
                 if (player.fallDistance <= 5.0 && (player.xxa != 0.0f || player.zza != 0.0f)) {
                     state = phobot.getMovementService().getMovement().move(player, mc.level, state, getDirectionAndYMovement(player));
                     if (!state.isReset()) {
@@ -85,6 +89,7 @@ public class Speed extends PhobotModule {
             }
 
             return new Vec3(forward * -Math.sin(Math.toRadians(yaw)) + strafe * Math.cos(Math.toRadians(yaw)),
+                    // TODO: this special handling of y movement is so weird and causes so many weird cases like in MovementPathfindingAlgorithm or the Pathfinder?!
                     player.getDeltaMovement().y,
                     forward * Math.cos(Math.toRadians(yaw)) - strafe * -Math.sin(Math.toRadians(yaw)));
         }

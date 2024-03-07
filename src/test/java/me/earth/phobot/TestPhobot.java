@@ -9,14 +9,14 @@ import me.earth.pingbypass.api.command.impl.CommandManagerImpl;
 import me.earth.pingbypass.api.config.impl.ConfigManagerImpl;
 import me.earth.pingbypass.api.files.FileManagerImpl;
 import me.earth.pingbypass.api.input.DummyKeyboardAndMouse;
+import me.earth.pingbypass.api.module.CommonModuleInitializer;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.module.impl.ModuleManagerImpl;
 import me.earth.pingbypass.api.players.impl.PlayerRegistryImpl;
 import me.earth.pingbypass.api.plugin.impl.PluginManagerImpl;
 import me.earth.pingbypass.api.plugin.impl.PluginUnloadingService;
+import me.earth.pingbypass.api.security.SecurityManagerDisabled;
 import me.earth.pingbypass.api.side.Side;
-import me.earth.pingbypass.commons.module.CommonModuleInitializer;
-import me.earth.pingbypass.security.SecurityManagerDisabled;
 import net.minecraft.network.chat.Component;
 
 import java.nio.file.Paths;

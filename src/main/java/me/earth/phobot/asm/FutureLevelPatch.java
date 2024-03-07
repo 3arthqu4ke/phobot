@@ -2,7 +2,7 @@ package me.earth.phobot.asm;
 
 import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.util.world.DelegatingClientLevel;
-import me.earth.pingbypass.commons.launch.Transformer;
+import me.earth.pingbypass.api.launch.Transformer;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;

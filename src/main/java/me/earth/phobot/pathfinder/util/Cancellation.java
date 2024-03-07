@@ -5,6 +5,7 @@ import lombok.Setter;
 /**
  * Represents the cancellation of some ongoing task.
  */
+@Setter
 @SuppressWarnings("LombokGetterMayBeUsed")
 public class Cancellation {
     public static final Cancellation UNCANCELLABLE = new Cancellation() {
@@ -14,7 +15,6 @@ public class Cancellation {
         }
     };
 
-    @Setter
     protected boolean cancelled;
 
     public void init() {

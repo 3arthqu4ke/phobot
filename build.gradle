@@ -1,242 +1,288 @@
 plugins {
-	id 'dev.architectury.loom' version '1.1.324' apply false
-	id 'com.github.johnrengelman.shadow' version '7.0.0' apply false
-	id 'architectury-plugin' version '3.4.145' apply false
+	id 'java'
+	id 'java-library'
+	id 'maven-publish'
+	id 'xyz.wagyourtail.unimined' version '1.1.1'
 }
 
-allprojects {
-	apply plugin: 'java'
-	apply plugin: 'java-library'
-	apply plugin: 'architectury-plugin'
-	apply plugin: 'dev.architectury.loom'
-	apply plugin: 'maven-publish'
+archivesBaseName  = 'phobot'
+version = "$rootProject.mc_version-$rootProject.project_version"
+group = 'me.earth.phobot'
 
-	archivesBaseName  = 'phobot'
-	version = "$rootProject.mc_version-$rootProject.project_version"
-	group = 'me.earth.phobot'
+sourceSets {
+	fabric
+	neoforge
+	lexforge
+}
 
-	sourceCompatibility = targetCompatibility = JavaVersion.VERSION_17
-
-	loom {
-		silentMojangMappingsLicense()
-		mixin.defaultRefmapName = 'mixins.phobot.refmap.json'
+repositories {
+	mavenCentral()
+	maven {
+		url = "https://files.minecraftforge.net/maven"
+	}
+	maven {
+		name = "sponge"
+		url = "https://repo.spongepowered.org/maven"
+	}
+	maven {
+		url = "https://maven.wagyourtail.xyz/releases"
 	}
 
-	/* TODO: java {
-		withSourcesJar()
-		withJavadocJar()
+	maven {
+		name = '3arthMaven'
+		url = 'https://3arthqu4ke.github.io/maven'
+	}
+
+	/*maven {
+        name 'local'
+        url project.rootDir.toURI().toURL().toString() + '/libs'
+    }*/
+
+	/*maven {
+		name 'PingBypassSuperDirMaven'
+		url project.rootDir.parentFile.toURI().toURL().toString() + '/pingbypass/build/maven'
 	}*/
 
-	repositories {
-		mavenCentral()
-		maven {
-			name = '3arthMaven'
-			url = 'https://3arthqu4ke.github.io/maven'
-		}
+	maven {
+		name = "ParchmentmcMaven"
+		url = "https://maven.parchmentmc.net/"
+	}
+}
 
-		/*maven {
-			name 'local'
-			url project.rootDir.toURI().toURL().toString() + '/libs'
-		}*/
+unimined.minecraft {
+	version project.mc_version
 
-		maven {
-			name 'PingBypassSuperDirMaven'
-			url project.rootDir.parentFile.toURI().toURL().toString() + '/pingbypass/build/maven'
-		}
-
-		maven {
-			name = "ParchmentmcMaven"
-			url = "https://maven.parchmentmc.net/"
-		}
+	mappings {
+		mojmap()
+		devFallbackNamespace "mojmap"
 	}
 
-	configurations {
-		lwjglAgent.extendsFrom runtimeOnly
+	defaultRemapJar = false
+}
+
+unimined.minecraft(sourceSets.fabric) {
+	combineWith(sourceSets.main)
+
+	fabric {
+		loader project.fabric_version
 	}
 
-	dependencies {
-		minecraft "com.mojang:minecraft:${rootProject.mc_version}"
-		mappings loom.officialMojangMappings()
+	defaultRemapJar = true
+}
 
-		compileOnly 'org.spongepowered:mixin:0.8.5'
+unimined.minecraft(sourceSets.neoforge) {
+	combineWith(sourceSets.main)
 
-		api ("me.earth.pingbypass:pb-api:$rootProject.pb_version") {
-			exclude module: 'gson'
-		}
+	neoForged {
+		loader project.neoforge_version
+		//mixinConfig "mixins.phobot.json"
+	}
 
-		api ("me.earth.pingbypass:pb-commons:$rootProject.pb_version") {
-			exclude module: 'gson'
-		}
+	minecraftRemapper.config {
+		ignoreConflicts(true)
+	}
 
+	defaultRemapJar = true
+}
+
+unimined.minecraft(sourceSets.lexforge) {
+	combineWith(sourceSets.main)
+
+	minecraftForge {
+		loader project.lexforge_version
+		mixinConfig "mixins.phobot.json"
+	}
+
+	minecraftRemapper.config {
+		ignoreConflicts(true)
+	}
+
+	defaultRemapJar = true
+}
+
+configurations {
+	mainImplementation
+}
+
+configurations {
+	lwjglAgent.extendsFrom runtimeOnly
+	runClientFabric
+	runClientLexForge
+	runClientNeoForge
+}
+
+dependencies {
+	compileOnly 'org.spongepowered:mixin:0.8.5-SNAPSHOT'
+	compileOnly 'me.earth.headlessmc:headlessmc:1.8.1'
+	lwjglAgent 'me.earth.headlessmc:headlessmc-lwjgl:1.8.1'
+
+	api ("me.earth.pingbypass:pb-api:$rootProject.pb_version") {
+		exclude module: 'gson'
+	}
+
+	runClientFabric "me.earth.pingbypass:pb-api:$rootProject.pb_version:fabric-dev"
+	runClientLexForge "me.earth.pingbypass:pb-api:$rootProject.pb_version:lexforge-dev"
+	runClientNeoForge "me.earth.pingbypass:pb-api:$rootProject.pb_version:neoforge-dev"
+
+	runClientFabric "me.earth.pingbypass:pb-client:$rootProject.pb_version:fabric-dev"
+	runClientLexForge "me.earth.pingbypass:pb-client:$rootProject.pb_version:lexforge-dev"
+	runClientNeoForge "me.earth.pingbypass:pb-client:$rootProject.pb_version:neoforge-dev"
+
+	//runClientFabric "me.earth.pingbypass:pb-server:$rootProject.pb_version:fabric-dev"
+	//runClientLexForge "me.earth.pingbypass:pb-server:$rootProject.pb_version:lexforge-dev"
+	//runClientNeoForge "me.earth.pingbypass:pb-server:$rootProject.pb_version:neoforge-dev"
+
+	compileOnly 'org.jetbrains:annotations:24.0.1'
+	compileOnly group: 'org.ow2.asm', name: 'asm-tree', version: '9.5'
+
+	compileOnly 'org.projectlombok:lombok:1.18.26'
+	annotationProcessor 'org.projectlombok:lombok:1.18.26'
+
+	testCompileOnly 'org.projectlombok:lombok:1.18.26'
+	testAnnotationProcessor 'org.projectlombok:lombok:1.18.26'
+
+	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
+	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
+}
+
+afterEvaluate {
+	fabricRunClient {
+		standardInput = System.in
 		if (rootProject.property('hmc.lwjgl').toBoolean()) {
-			lwjglAgent "me.earth.headlessmc:headlessmc-lwjgl:1.8.0"
+			jvmArgs += ["-javaagent:${configurations.lwjglAgent.files.iterator().next()}"]
+			systemProperties['joml.nounsafe'] = 'true'
+			systemProperties['fabric.systemLibraries'] = "${configurations.lwjglAgent.files.iterator().next()}"
 		}
+	}
+}
 
-		// ugly hacks! essentially forge runClient needs this to find mixins.pingbypass_client.json
-		if (rootProject.enable_forge_runs == 'true' && System.getenv('DEPLOY_TO_GITHUB_PACKAGES_URL') == null) {
-			if (rootProject.use_pb_client == 'true') {
-				api ("me.earth.pingbypass:pb-client:$rootProject.pb_version") {
-					exclude module: 'gson'
-				}
-			}
+processFabricResources {
+	inputs.property "version", project.version
 
-			if (rootProject.use_pb_server == 'true') {
-				api ("me.earth.pingbypass:pb-server:$rootProject.pb_version") {
-					exclude module: 'gson'
-				}
-			}
-		}
+	filesMatching("fabric.mod.json") {
+		expand "version": project.version
+	}
+}
 
-		compileOnly 'org.jetbrains:annotations:24.0.1'
-		compileOnly group: 'org.ow2.asm', name: 'asm-tree', version: '9.5'
+processNeoforgeResources {
+	inputs.property "version", project.version
 
-		compileOnly 'org.projectlombok:lombok:1.18.26'
-		annotationProcessor 'org.projectlombok:lombok:1.18.26'
+	filesMatching("META-INF/mods.toml") {
+		expand "version": project.version
+	}
+}
 
-		testCompileOnly 'org.projectlombok:lombok:1.18.26'
-		testAnnotationProcessor 'org.projectlombok:lombok:1.18.26'
+processLexforgeResources {
+	inputs.property "version", project.version
 
-		testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
-		testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
+	filesMatching("META-INF/mods.toml") {
+		expand "version": project.version
+	}
+}
+
+/* TODO: java {
+    withSourcesJar()
+    withJavadocJar()
+}*/
+
+tasks.withType(org.gradle.jvm.tasks.Jar).configureEach {
+	from("LICENSE") {
+		duplicatesStrategy = DuplicatesStrategy.INCLUDE
+		rename { "${it}_${project.archivesBaseName}" }
 	}
 
+	manifest {
+		attributes(
+			'PingBypassPluginConfig': 'PhobotPluginConfig.json',
+			'MixinConfigs': "mixins.phobot.json",
+			'Implementation-Title': 'Phobot',
+			'Implementation-Version': project.version,
+		)
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.encoding = "UTF-8"
+	if (JavaVersion.current().isJava9Compatible()) {
+		it.options.release.set(17)
+	}
+}
+
+publishing {
+	publications {
+		"${name.toLowerCase()}"(MavenPublication) {
+			((MavenPublication) it).groupId "${group}"
+			((MavenPublication) it).artifactId "${archivesBaseName.toLowerCase()}"
+			((MavenPublication) it).version "${version}"
+			from components.java
+		}
+	}
+
+	repositories {
+		if (System.getenv('DEPLOY_TO_GITHUB_PACKAGES_URL') == null) {
+			maven {
+				name = 'BuildDirMaven'
+				url = rootProject.layout.buildDirectory.dir('maven')
+			}
+		} else {
+			maven {
+				name = 'GithubPagesMaven'
+				url = System.getenv('DEPLOY_TO_GITHUB_PACKAGES_URL')
+				credentials {
+					username = System.getenv('GITHUB_USER')
+					password = System.getenv('GITHUB_TOKEN')
+				}
+			}
+		}
+	}
+}
+
+publish {
+	dependsOn(build)
+}
+
+sourceSets {
 	test {
-		useJUnitPlatform()
-	}
-
-	tasks.withType(JavaCompile).configureEach {
-		it.options.encoding = "UTF-8"
-		if (JavaVersion.current().isJava9Compatible()) {
-			it.options.release.set(17)
-		}
-	}
-
-	jar {
-		from("LICENSE") {
-			rename { "${it}_${project.archivesBaseName}"}
-		}
-
-		manifest {
-			attributes(
-				'PingBypassPluginConfig': 'PhobotPluginConfig.json',
-				'Implementation-Title': 'Phobot',
-				'Implementation-Version': project.version,
-			)
-		}
+		compileClasspath += main.compileClasspath + main.runtimeClasspath + main.output
+		runtimeClasspath += main.compileClasspath + main.runtimeClasspath + main.output
 	}
 }
 
-architectury {
-	injectInjectables = false
-	common('forge', 'fabric')
+test {
+	useJUnitPlatform()
 }
 
-subprojects {
-	apply plugin: 'com.github.johnrengelman.shadow'
-
-	archivesBaseName  = "phobot-$project.name"
-
-	configurations {
-		jarLibs
+// Forge Runs seem to have problems running from the build/classes folder
+// So instead we just run from the built jar
+afterEvaluate {
+	fabricRunClient {
+		classpath += files(configurations.runClientFabric.files)
+		systemProperties['pb.classpath.plugins'] = 'PhobotPluginConfig.json'
 	}
 
-	afterEvaluate {
-		runClient {
-			dependsOn(build)
-			doFirst {
-				checkThatClientOrServerAreOnClasspath()
-				if (project.name == 'forge' && rootProject.enable_forge_runs != 'true') {
-					throw new IllegalStateException('Property enable_forge_runs is not true, cannot run forge')
-				}
-			}
-
-			// TODO: there are ways to use javaagents from dependencies
-			systemProperties['pb.classpath.plugins'] = 'PhobotPluginConfig.json'
-			if (rootProject.property('hmc.lwjgl').toBoolean()) {
-				jvmArgs += ["-javaagent:${configurations.lwjglAgent.files.iterator().next()}"]
-				systemProperties['joml.nounsafe'] = 'true'
-				systemProperties['fabric.systemLibraries'] = "${configurations.lwjglAgent.files.iterator().next()}"
-			}
-		}
-	}
-
-	tasks.register('runClientWithoutDependencies') {
-		doLast {
-			runClient.exec()
-		}
-	}
-
-	shadowJar {
-		configurations = [project.configurations.jarLibs]
-		classifier 'dev-shadow'
-	}
-
-	remapJar {
-		inputFile.set shadowJar.archiveFile
-		dependsOn shadowJar
-		classifier null
-	}
-}
-
-allprojects {
-	publishing {
-		publications {
-			"${project.name.toLowerCase()}"(MavenPublication) {
-				((MavenPublication) it).groupId "${project.group}"
-				((MavenPublication) it).artifactId "${project.archivesBaseName.toLowerCase()}"
-				((MavenPublication) it).version "${project.version}"
-				from components.java
-			}
+	// Forge Runs seem to have problems running from the build/classes folder
+	// So instead we just run from the built jar
+	lexforgeRunClient {
+		dependsOn(lexforgeJar)
+		classpath += files(configurations.runClientLexForge.files)
+		systemProperties['pb.classpath.plugins'] = 'PhobotPluginConfig.json'
+		classpath = classpath.filter {
+			!it.toString().contains('phobot/build/classes/java/'.replace('/', File.separator))
+					&& !it.toString().contains('phobot/build/resources/'.replace('/', File.separator))
 		}
 
-		repositories {
-			if (System.getenv('DEPLOY_TO_GITHUB_PACKAGES_URL') == null) {
-				maven {
-					name = 'BuildDirMaven'
-					url = rootProject.layout.buildDirectory.dir('maven')
-				}
-			} else {
-				maven {
-					name = 'GithubPagesMaven'
-					url = System.getenv('DEPLOY_TO_GITHUB_PACKAGES_URL')
-					credentials {
-						username = System.getenv('GITHUB_USER')
-						password = System.getenv('GITHUB_TOKEN')
-					}
-				}
-			}
+		classpath += files("${projectDir}/build/libs/phobot-${version}-lexforge-dev.jar".replace('/', File.separator))
+	}
+
+	neoforgeRunClient {
+		dependsOn(neoforgeJar)
+		classpath += files(configurations.runClientNeoForge.files)
+		systemProperties['pb.classpath.plugins'] = 'PhobotPluginConfig.json'
+		classpath = classpath.filter {
+			!it.toString().contains('phobot/build/classes/java/'.replace('/', File.separator))
+					&& !it.toString().contains('phobot/build/resources/'.replace('/', File.separator))
 		}
-	}
 
-	publish {
-		dependsOn(build)
-	}
-}
-
-tasks.register('runClientFabric') {
-	description = 'Runs Phobot on Fabric'
-	group = 'run'
-	dependsOn(project(':fabric')['build'])
-	finalizedBy(project(':fabric')['runClient'])
-}
-
-tasks.register('runClientForge') {
-	description = 'Runs Phobot on Forge'
-	group = 'run'
-	dependsOn(project(':forge')['build'])
-	finalizedBy(project(':forge')['runClient'])
-}
-
-def checkThatClientOrServerAreOnClasspath() {
-	if (rootProject.use_pb_client != 'true' && rootProject.use_pb_server != 'true') {
-		project.logger.log(LogLevel.ERROR, '---------------------------------------------------------------------------------------')
-		project.logger.log(LogLevel.ERROR, 'WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING')
-		project.logger.log(LogLevel.ERROR, '---------------------------------------------------------------------------------------')
-		project.logger.log(LogLevel.ERROR, '')
-		project.logger.log(LogLevel.ERROR, 'Both properties use_pb_client and use_pb_server are false, phobot will not be loaded!')
-		project.logger.log(LogLevel.ERROR, '')
-		project.logger.log(LogLevel.ERROR, '---------------------------------------------------------------------------------------')
-		project.logger.log(LogLevel.ERROR, 'WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING')
-		project.logger.log(LogLevel.ERROR, '---------------------------------------------------------------------------------------')
+		classpath += files("${projectDir}/build/libs/phobot-${version}-neoforge-dev.jar".replace('/', File.separator))
 	}
 }

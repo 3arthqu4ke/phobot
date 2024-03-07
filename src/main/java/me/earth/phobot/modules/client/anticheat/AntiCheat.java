@@ -14,8 +14,12 @@ import net.minecraft.util.Mth;
 
 @Getter
 public class AntiCheat extends ModuleImpl {
+    private static final StrictDirection NCP_AND_GRIM = new Combined(Grim.INSTANCE, NCP.INSTANCE);
+
     private final Setting<Integer> actions = number("Actions", 8, 1, 100, "Block placement actions to perform per tick.");
     private final Setting<Double> miningRange = precise("MiningRange", 5.25, 0.1, 6.0, "Range within which you can mine blocks.");
+
+    private final Setting<MovementAntiCheat> movement = constant("Movement", MovementAntiCheat.Grim, "Movement AntiCheat checks, important for NoSlowDown and Velocity.");
 
     private final Setting<StrictDirection.Type> strictDirection = constant("StrictDirection", StrictDirection.Type.Grim, "Strict direction checks.");
     private final Setting<StrictDirection.Type> miningStrictDirection = constant("MiningStrictDirection", StrictDirection.Type.NCP, "There seems to be no strict direction check for mining on Grim.");
@@ -79,6 +83,7 @@ public class AntiCheat extends ModuleImpl {
         return switch (type.getValue()) {
             case NCP -> NCP.INSTANCE;
             case Grim -> Grim.INSTANCE;
+            case Combined -> NCP_AND_GRIM;
             default -> Vanilla.INSTANCE;
         };
     }

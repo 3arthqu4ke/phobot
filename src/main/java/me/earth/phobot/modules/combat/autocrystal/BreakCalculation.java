@@ -57,6 +57,7 @@ public class BreakCalculation {
 
     public boolean attack(Entity crystal) {
         if (module.breakTimer().passed(module.breakDelay().getValue())) {
+            // TODO: ROTATE
             phobot.getAttackService().attack(player, crystal);
             module.breakTimer().reset();
             attacked = true;

@@ -1,9 +1,9 @@
 package me.earth.phobot.asm;
 
 import lombok.extern.slf4j.Slf4j;
+import me.earth.pingbypass.api.launch.PreLaunchServiceImpl;
 import me.earth.pingbypass.api.plugin.PluginMixinConnector;
 import me.earth.pingbypass.api.side.Side;
-import me.earth.pingbypass.commons.launch.PreLaunchServiceImpl;
 
 @Slf4j
 @SuppressWarnings("unused")

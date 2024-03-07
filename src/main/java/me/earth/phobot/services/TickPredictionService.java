@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.util.time.StopWatch;
 import me.earth.pingbypass.api.event.SubscriberImpl;
 import me.earth.pingbypass.api.event.listeners.AbstractEventListener;
-import me.earth.pingbypass.commons.event.network.PacketEvent;
+import me.earth.pingbypass.api.event.network.PacketEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;

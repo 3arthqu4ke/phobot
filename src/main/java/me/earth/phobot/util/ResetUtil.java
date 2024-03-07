@@ -5,7 +5,7 @@ import me.earth.phobot.event.ChangeWorldEvent;
 import me.earth.pingbypass.api.event.api.Subscriber;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.module.Module;
-import me.earth.pingbypass.commons.event.network.PacketEvent;
+import me.earth.pingbypass.api.event.network.PacketEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 

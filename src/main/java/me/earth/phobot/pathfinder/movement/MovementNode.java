@@ -12,6 +12,7 @@ import me.earth.phobot.util.player.MovementPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Position;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -24,11 +25,14 @@ import java.util.Set;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 public class MovementNode extends Abstract3dNode<MovementNode> {
+    // TODO: track fallDistance!
     private final Movement.State state;
     private final boolean horizontalCollision;
     private final boolean verticalCollisionBelow;
     private final boolean verticalCollision;
     private final boolean onGround;
+    @EqualsAndHashCode.Exclude
+    private final float fallDistance;
 
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
@@ -43,15 +47,17 @@ public class MovementNode extends Abstract3dNode<MovementNode> {
     private int targetNodeIndex;
 
     public MovementNode(MovementNode node, @Nullable MovementNode goal, int targetNodeIndex) {
-        this(new Vec3(node.getX(), node.getY(), node.getZ()), node.state, goal, node.horizontalCollision, node.verticalCollisionBelow, node.verticalCollision, node.onGround, targetNodeIndex);
+        this(new Vec3(node.getX(), node.getY(), node.getZ()), node.state, goal,
+                node.horizontalCollision, node.verticalCollisionBelow, node.verticalCollision, node.onGround, node.fallDistance, targetNodeIndex);
     }
 
-    public MovementNode(MovementPlayer player, Movement.State state, @Nullable MovementNode goal, int targetNodeIndex) {
-        this(player.position(), state, goal, player.horizontalCollision, player.verticalCollisionBelow, player.verticalCollision, player.onGround(), targetNodeIndex);
+    public MovementNode(Player player, Movement.State state, @Nullable MovementNode goal, int targetNodeIndex) {
+        this(player.position(), state, goal, player.horizontalCollision, player.verticalCollisionBelow,
+                player.verticalCollision, player.onGround(), player.fallDistance, targetNodeIndex);
     }
 
-    public MovementNode(Position pos, Movement.State state, @Nullable MovementNode goal,
-                        boolean horizontalCollision, boolean verticalCollisionBelow, boolean verticalCollision, boolean onGround, int targetNodeIndex) {
+    public MovementNode(Position pos, Movement.State state, @Nullable MovementNode goal, boolean horizontalCollision, boolean verticalCollisionBelow,
+                        boolean verticalCollision, boolean onGround, float fallDistance, int targetNodeIndex) {
         super(pos.x(), pos.y(), pos.z());
         this.state = state;
         this.horizontalCollision = horizontalCollision;
@@ -59,6 +65,7 @@ public class MovementNode extends Abstract3dNode<MovementNode> {
         this.verticalCollision = verticalCollision;
         this.onGround = onGround;
         this.goal = goal;
+        this.fallDistance = fallDistance;
         this.targetNodeIndex = targetNodeIndex;
     }
 
@@ -69,12 +76,14 @@ public class MovementNode extends Abstract3dNode<MovementNode> {
     }
 
     public void apply(Entity entity) {
+        // TODO: arent so many more fields that we should apply?! fallDistance being a recent example of an oversight
         entity.setPos(getX(), getY(), getZ());
         entity.setDeltaMovement(state.getDelta());
         entity.setOnGround(onGround);
         entity.horizontalCollision = horizontalCollision;
         entity.verticalCollision = verticalCollision;
         entity.verticalCollisionBelow = verticalCollisionBelow;
+        entity.fallDistance = fallDistance;
     }
 
     public boolean isGoal() {
@@ -83,10 +92,6 @@ public class MovementNode extends Abstract3dNode<MovementNode> {
 
     public boolean isStart() {
         return targetNodeIndex == 0;
-    }
-
-    public boolean positionEquals(@Nullable MovementNode other) {
-        return super.equals(other);
     }
 
     public Set<BlockPos> getBlockedPositions(MovementPlayer player) {

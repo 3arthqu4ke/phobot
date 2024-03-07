@@ -8,9 +8,9 @@ import me.earth.phobot.modules.client.anticheat.AntiCheat;
 import me.earth.phobot.util.NullabilityUtil;
 import me.earth.pingbypass.api.event.SubscriberImpl;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
-import me.earth.pingbypass.commons.event.SafeListener;
-import me.earth.pingbypass.commons.event.ShutdownEvent;
-import me.earth.pingbypass.commons.event.loop.GameloopEvent;
+import me.earth.pingbypass.api.event.SafeListener;
+import me.earth.pingbypass.api.event.ShutdownEvent;
+import me.earth.pingbypass.api.event.loop.GameloopEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
@@ -75,6 +75,10 @@ public class InventoryService extends SubscriberImpl {
                 }
             }
         });
+    }
+
+    public boolean isLockedIntoTotem() {
+        return lockedIntoTotem.get();
     }
 
     public void use(Consumer<InventoryContext> action) {
