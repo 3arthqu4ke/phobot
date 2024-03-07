@@ -1,7 +1,7 @@
 package me.earth.phobot.asm;
 
 import lombok.extern.slf4j.Slf4j;
-import me.earth.pingbypass.commons.launch.Transformer;
+import me.earth.pingbypass.api.launch.Transformer;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 

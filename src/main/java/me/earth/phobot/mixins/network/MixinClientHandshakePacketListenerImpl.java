@@ -1,7 +1,7 @@
 package me.earth.phobot.mixins.network;
 
 import me.earth.phobot.event.AuthenticationEvent;
-import me.earth.pingbypass.commons.util.mixin.MixinHelper;
+import me.earth.pingbypass.api.util.mixin.MixinHelper;
 import net.minecraft.client.multiplayer.ClientHandshakePacketListenerImpl;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;

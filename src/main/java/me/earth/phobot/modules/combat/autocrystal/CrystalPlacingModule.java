@@ -26,10 +26,10 @@ import me.earth.pingbypass.api.gui.hud.DisplaysHudInfo;
 import me.earth.pingbypass.api.input.Bind;
 import me.earth.pingbypass.api.setting.Setting;
 import me.earth.pingbypass.api.traits.Nameable;
-import me.earth.pingbypass.commons.event.SafeListener;
-import me.earth.pingbypass.commons.event.loop.GameloopEvent;
-import me.earth.pingbypass.commons.event.network.PacketEvent;
-import me.earth.pingbypass.commons.event.network.PrePostSubscriber;
+import me.earth.pingbypass.api.event.SafeListener;
+import me.earth.pingbypass.api.event.loop.GameloopEvent;
+import me.earth.pingbypass.api.event.network.PacketEvent;
+import me.earth.pingbypass.api.event.network.PrePostSubscriber;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -46,6 +46,7 @@ import org.apache.commons.lang3.mutable.MutableObject;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+// TODO: rotations are still bad!
 // TODO: AntiOutPlace, attempt to schedule crystal placement in a way that we can get crystals in
 //  crystal spawns -> schedule placement to arrive after player around us broke one
 @Slf4j
@@ -104,9 +105,14 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
     private volatile CrystalPosition obbyPos = null;
     @Setter
     private volatile CrystalPlacingAction rotationAction = null;
-    private Entity targetedPlayer;
-    private Entity lastCrystal;
+
+    @Setter(AccessLevel.PROTECTED)
+    @Getter(AccessLevel.NONE)
+    private Entity target;
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
     private BlockPos renderPos;
+    private Entity lastCrystal;
 
     public CrystalPlacingModule(Phobot phobot, SurroundService surroundService, String name, Nameable category, String description) {
         super(phobot, phobot.getBlockPlacer(), name, category, description, 0);
@@ -164,6 +170,8 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
                     float[] rotations = RotationUtil.getRotations(player, lastCrystalPos.getX() + 0.5, lastCrystalPos.getY(), lastCrystalPos.getZ() + 0.5);
                     phobot.getMotionUpdateService().rotate(player, rotations[0], rotations[1]);
                 }
+
+                calculationService.calculate(level, player, 0, multiThreading.getValue());
             }
         });
 
@@ -177,7 +185,7 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
 
     @Override
     public String getHudInfo() {
-        Entity target = this.targetedPlayer;
+        Entity target = this.target;
         if (target instanceof Player player) {
             return player.getScoreboardName();
         }
@@ -203,7 +211,6 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
             return;
         }
 
-        // TODO: prevent CrystalPlacer from placing obby! <--------- ??????????? WTF DOES THIS MEAN? WHAT WAS I THINKING?
         CrystalPosition obbyPos = obbyPos();
         if (obbyPos != null) {
             obbyPos(null);
@@ -225,9 +232,19 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
         this.renderPos = pos;
     }
 
+    public Entity getTarget() {
+        if (renderTimer.passed(250)) {
+            renderPos = null;
+            target = null;
+        }
+
+        return target;
+    }
+
     public BlockPos getRenderPos() {
         if (renderTimer.passed(250)) {
             renderPos = null;
+            target = null;
         }
 
         return renderPos;
@@ -236,7 +253,7 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
     public void reset() {
         rotationAction = null;
         lastCrystal = null;
-        targetedPlayer = null;
+        target = null;
         renderPos = null;
         lastCrystalPos = new BlockPos(0, -1000, 0);
         obbyPos = null;

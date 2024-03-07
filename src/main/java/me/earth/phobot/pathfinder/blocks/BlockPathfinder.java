@@ -42,9 +42,9 @@ public class BlockPathfinder {
     public @NotNull List<BlockPos> getShortestPath(BlockPos target, int maxCost, BiPredicate<BlockPos, BlockPos> validityCheck, BiPredicate<BlockPos, @Nullable BlockPos> goalCheck) {
         center.setToOffsetFromCenter(target);
         BlockPathfinderAlgorithm firstSearchNoHeuristic = new BlockPathfinderAlgorithm(center, validityCheck, goalCheck, target, maxCost);
-        List<BlockNode> result = firstSearchNoHeuristic.run(Cancellation.UNCANCELLABLE);
+        var result = firstSearchNoHeuristic.run(Cancellation.UNCANCELLABLE);
         if (result != null) {
-            return result.stream().map(BlockNode::getCurrent).map(BlockPos::immutable).collect(Collectors.toList());
+            return result.getPath().stream().map(BlockNode::getCurrent).map(BlockPos::immutable).collect(Collectors.toList());
         }
 
         return Collections.emptyList();

@@ -7,7 +7,7 @@ import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.input.Bind;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.commons.event.loop.TickEvent;
+import me.earth.pingbypass.api.event.loop.TickEvent;
 
 public class Step extends PhobotModule {
     private final Setting<Boolean> hold = bool("Hold", false, "Disables this module when u let go of the bind.");

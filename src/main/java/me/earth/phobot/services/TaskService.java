@@ -4,7 +4,7 @@ import me.earth.phobot.util.time.TimeUtil;
 import me.earth.pingbypass.api.event.SubscriberImpl;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.module.Module;
-import me.earth.pingbypass.commons.event.loop.GameloopEvent;
+import me.earth.pingbypass.api.event.loop.GameloopEvent;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.NotNull;
 

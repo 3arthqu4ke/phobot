@@ -14,6 +14,13 @@ import net.minecraft.world.level.block.Block;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Traps players in a cage made up of blocks.
+ *
+ * @see AutoTrap
+ * @see SelfTrap
+ * @see AntiAnvil
+ */
 public interface TrapsPlayers extends ChecksBlockPlacingValidity, FindsShortestPath {
     Map<BlockPos, Long> getBlackList();
 

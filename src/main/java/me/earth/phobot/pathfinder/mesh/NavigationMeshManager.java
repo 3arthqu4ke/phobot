@@ -7,14 +7,16 @@ import me.earth.phobot.movement.Movement;
 import me.earth.phobot.util.collections.XZMap;
 import me.earth.phobot.util.mutables.MutPos;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 
+import java.util.Comparator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 // TODO: maintain "jump nodes" if we can jump from one node to the other?
-// TODO: maintain multiple graphs and keep a pool, so we can calculate multiple paths at the same time?
 /**
  * For fast pathfinding we maintain a navigation mesh.
  * It consists of {@link MeshNode}s, the positions a player can be in and also via {@link MeshNode#getAdjacent()}
@@ -47,7 +49,7 @@ public class NavigationMeshManager extends AbstractInvalidationManager<MeshNode,
     @Override
     protected void addPostWorkingTask(BlockPos pos, BlockState state, ChunkWorker worker, LevelChunk chunk) {
         if (pos.getY() <= getConfig().getMaxHeight() && pos.getY() >= getConfig().getMinHeight()) {
-            if (state.getCollisionShape(mc.level, pos).isEmpty()) {
+            if (state.getCollisionShape(chunk.getLevel(), pos).isEmpty()) {
                 worker.addTask(new AirBlockTask(mc, chunk.getLevel(), worker, this, pos));
             } else {
                 worker.addTask(new SolidBlockTask(mc, chunk.getLevel(), worker, this, pos));
@@ -56,12 +58,12 @@ public class NavigationMeshManager extends AbstractInvalidationManager<MeshNode,
     }
 
     @Override
-    protected void addInvalidateTask(BlockPos pos, BlockState state, ChunkWorker worker) {
+    protected void addInvalidateTask(LevelChunk chunk, BlockPos pos, BlockState state, ChunkWorker worker) {
         // NOP, BlockChangeTask does that
     }
 
     @Override
-    protected void invalidate(MutPos pos, BlockState state, ChunkWorker chunk) {
+    protected void invalidate(LevelChunk chunk, MutPos pos, BlockState state, ChunkWorker worker) {
         // NOP, BlockChangeTask does that
     }
 
@@ -87,6 +89,13 @@ public class NavigationMeshManager extends AbstractInvalidationManager<MeshNode,
     protected void reset() {
         super.reset();
         xZMap.clear();
+    }
+
+    public Optional<MeshNode> getStartNode(Player player) {
+        // TODO: if player is not on ground check MeshNodes underneath, because for the MovementPathfinder we first need to drop down onto the node
+
+        // TODO: with the XZMap we can make this much more efficient?
+        return getMap().values().stream().min(Comparator.comparingDouble(n -> n.distanceSqToCenter(player.getX(), player.getY(), player.getZ())));
     }
 
 }

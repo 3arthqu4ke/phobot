@@ -4,7 +4,7 @@ import me.earth.pingbypass.PingBypass;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.module.impl.ModuleImpl;
-import me.earth.pingbypass.commons.event.loop.LocalPlayerUpdateEvent;
+import me.earth.pingbypass.api.event.loop.LocalPlayerUpdateEvent;
 import net.minecraft.client.player.LocalPlayer;
 
 public class Sprint extends ModuleImpl {

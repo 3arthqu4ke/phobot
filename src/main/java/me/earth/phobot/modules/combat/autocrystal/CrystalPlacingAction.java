@@ -17,6 +17,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.network.protocol.game.ServerboundSwingPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
@@ -84,7 +86,7 @@ public class CrystalPlacingAction extends BlockPlacer.Action {
                         && !getBlockPlacer().getMotionUpdateService().isSpoofing()
                         && getBlockPlacer().getMotionUpdateService().isInPreUpdate()) {
                     // We are on the mainthread an in PreMotionPlayerUpdate, we can spoof our rotations
-                    // Then this.execute will be called again and we should be rotated correctly
+                    // Then this.execute will be called again, and we should be rotated correctly
                     getBlockPlacer().getMotionUpdateService().rotate(player, hitResult.rotations[0], hitResult.rotations[1]);
                 } else {
                     failedDueToRotations = true;
@@ -94,16 +96,24 @@ public class CrystalPlacingAction extends BlockPlacer.Action {
             }
         }
         // switch to end crystals
-        InventoryContext.SwitchResult switchResult = context.switchTo(Items.END_CRYSTAL, InventoryContext.DEFAULT_SWAP_SWITCH);
+
+        int flags = InventoryContext.DEFAULT_SWAP_SWITCH;
+        // check if we are holding food in our offhand, in that case switch into main hand
+        if (player.getItemInHand(InteractionHand.OFF_HAND).getItem().getFoodProperties() != null) {
+            flags = InventoryContext.PREFER_MAINHAND;
+        }
+
+        InventoryContext.SwitchResult switchResult = context.switchTo(Items.END_CRYSTAL, flags);
         if (switchResult == null) {
             return false;
         }
 
         if (packetRotate) { // send rotation packet
-            player.connection.send(new ServerboundMovePlayerPacket.Rot(hitResult.rotations[0], hitResult.rotations[1], player.onGround()));
+            float[] rotations = RotationUtil.getRotations(phobot.getLocalPlayerPositionService().getPlayerOnLastPosition(player), hitResult.result.getLocation());
+            player.connection.send(new ServerboundMovePlayerPacket.Rot(rotations[0], rotations[1], player.onGround()));
         }
         // Update our CrystalPlacingModule
-        handleModule(pos);
+        handleModule(clientLevel, pos);
         // Send placement packet
         ServerboundUseItemOnPacket packet = new ServerboundUseItemOnPacket(switchResult.hand(), hitResult.result, 0);
         player.connection.send(packet);
@@ -112,12 +122,17 @@ public class CrystalPlacingAction extends BlockPlacer.Action {
         return true;
     }
 
-    private void handleModule(BlockPos pos) {
+    private void handleModule(ClientLevel level, BlockPos pos) {
         module.lastCrystalPos(pos.above());
         long time = TimeUtil.getMillis();
         module.map().put(pos, time);
         module.setRenderPos(pos);
         module.placeTimer().reset();
+        Integer targetId = crystalPosition.getTargetId();
+        if (targetId != null) {
+            Entity entity = level.getEntity(targetId);
+            module.target(entity);
+        }
     }
 
     // TODO: build height!!!

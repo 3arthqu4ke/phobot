@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.event.ConnectEvent;
 import me.earth.pingbypass.api.event.SubscriberImpl;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
-import me.earth.pingbypass.commons.event.network.PacketEvent;
+import me.earth.pingbypass.api.event.network.PacketEvent;
 import net.minecraft.network.protocol.handshake.ClientIntent;
 import net.minecraft.network.protocol.handshake.ClientIntentionPacket;
 import org.jetbrains.annotations.Unmodifiable;

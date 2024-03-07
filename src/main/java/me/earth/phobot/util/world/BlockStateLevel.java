@@ -96,8 +96,7 @@ public interface BlockStateLevel extends CollisionGetter {
     }
 
     /**
-     * IMPORTANT: If you want to override {@link #getBlockState(BlockPos)} or other methods, do it like in {@link me.earth.phobot.movement.MovementParable},
-     * by overriding {@link #getImpl(ClientLevel)}!
+     * IMPORTANT: If you want to override {@link #getBlockState(BlockPos)} or other methods, do it by overriding {@link #getImpl(ClientLevel)}!
      */
     class Delegating extends UnusableLevels.UnusableBlockStateLevel implements BlockStateLevel {
         public Delegating(ClientLevel level) {

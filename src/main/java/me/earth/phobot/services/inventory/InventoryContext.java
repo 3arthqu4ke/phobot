@@ -39,17 +39,21 @@ public class InventoryContext {
     private HotbarSwitch hotbarSwitch;
 
     public @Nullable SwitchResult switchTo(Item item, int flags) {
+        return switchTo(stack -> stack.is(item), flags);
+    }
+
+    public @Nullable SwitchResult switchTo(Predicate<ItemStack> check, int flags) {
         if (!(player.containerMenu instanceof InventoryMenu)) {
             return null;
         }
 
-        if (player.inventoryMenu.getSlot(InventoryMenu.SHIELD_SLOT).getItem().is(item)) {
+        if (check.test(player.inventoryMenu.getSlot(InventoryMenu.SHIELD_SLOT).getItem())) {
             return SwitchResult.get(player.inventoryMenu.getSlot(InventoryMenu.SHIELD_SLOT));
-        } else if (getSelectedSlot().getItem().is(item)) {
+        } else if (check.test(getSelectedSlot().getItem())) {
             return SwitchResult.get(getSelectedSlot());
         }
 
-        Slot slot = find(s -> s.getItem().is(item) ? s : null);
+        Slot slot = find(s -> check.test(s.getItem()) ? s : null);
         return switchTo(slot, flags);
     }
 

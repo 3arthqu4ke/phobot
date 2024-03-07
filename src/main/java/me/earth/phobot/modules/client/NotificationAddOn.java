@@ -6,7 +6,7 @@ import me.earth.phobot.event.TotemPopEvent;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.plugin.impl.ModuleAddOn;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.commons.module.client.Notifications;
+import me.earth.pingbypass.api.module.client.Notifications;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;

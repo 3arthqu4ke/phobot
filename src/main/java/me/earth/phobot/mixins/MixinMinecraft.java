@@ -3,8 +3,9 @@ package me.earth.phobot.mixins;
 import me.earth.phobot.event.ChangeWorldEvent;
 import me.earth.phobot.event.LocalPlayerDeathEvent;
 import me.earth.phobot.event.PreKeybindHandleEvent;
+import me.earth.phobot.modules.misc.AutoRespawn;
 import me.earth.pingbypass.PingBypassApi;
-import me.earth.pingbypass.commons.util.mixin.MixinHelper;
+import me.earth.pingbypass.api.util.mixin.MixinHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -30,9 +31,17 @@ public abstract class MixinMinecraft {
         PingBypassApi.getEventBus().post(new ChangeWorldEvent(clientLevel));
     }
 
-    @Inject(method = "handleKeybinds", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isUsingItem()Z", ordinal = 0, shift = At.Shift.BEFORE), cancellable = true)
+    @Inject(
+        method = "handleKeybinds",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isUsingItem()Z", ordinal = 0, shift = At.Shift.BEFORE),
+        cancellable = true)
     private void handleKeybindsHook(CallbackInfo ci) {
         MixinHelper.hook(new PreKeybindHandleEvent(), ci);
+    }
+
+    @Inject(method = "setScreen", at = @At(value = "NEW", target = "(Lnet/minecraft/network/chat/Component;Z)Lnet/minecraft/client/gui/screens/DeathScreen;"), cancellable = true)
+    private void deathScreenHook(Screen screen, CallbackInfo ci) {
+        MixinHelper.hook(new AutoRespawn.DeathScreenEvent(), ci);
     }
 
     @Inject(method = "setScreen", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;shouldShowDeathScreen()Z", shift = At.Shift.BEFORE))

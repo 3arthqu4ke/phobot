@@ -13,7 +13,7 @@ import me.earth.phobot.util.time.StopWatch;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.commons.event.gui.GuiScreenEvent;
+import me.earth.pingbypass.api.event.gui.GuiScreenEvent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;

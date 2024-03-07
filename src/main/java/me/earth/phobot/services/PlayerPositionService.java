@@ -20,7 +20,7 @@ public class PlayerPositionService extends SubscriberImpl {
     }
 
     @Synchronized
-    protected void addToPositions(PlayerPosition position, Deque<PlayerPosition> positions) {
+    protected synchronized void addToPositions(PlayerPosition position, Deque<PlayerPosition> positions) {
         if (positions.size() >= getThreshold()) {
             positions.removeLast();
         }

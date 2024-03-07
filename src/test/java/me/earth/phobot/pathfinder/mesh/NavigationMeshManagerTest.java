@@ -44,7 +44,7 @@ public class NavigationMeshManagerTest {
     public static NavigationMeshManager createNavigationMeshManager(int minHeight) {
         Phobot phobot = TestPhobot.PHOBOT;
         Pathfinding module = new Pathfinding(phobot.getPingBypass(), phobot.getExecutorService());
-        module.getSetting("MinHeight", Integer.class).ifPresent(s -> s.setValue(minHeight));
+        module.getSetting("MinHeight", Integer.class).orElseThrow().setValue(minHeight);
         module.getCalcAsync().setValue(false);
         return new NavigationMeshManager(module, new BunnyHopCC(), new HashMap<>(), new XZMap<>(new HashMap<>()));
     }

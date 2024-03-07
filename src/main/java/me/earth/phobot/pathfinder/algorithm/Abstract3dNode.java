@@ -2,14 +2,30 @@ package me.earth.phobot.pathfinder.algorithm;
 
 import lombok.Data;
 import me.earth.phobot.util.math.MathUtil;
+import net.minecraft.core.Position;
 import net.minecraft.core.SectionPos;
 import org.jetbrains.annotations.NotNull;
 
 @Data
-public abstract class Abstract3dNode<N extends Abstract3dNode<N>> implements PathfindingNode<N> {
+public abstract class Abstract3dNode<N extends Abstract3dNode<N>> implements PathfindingNode<N>, Position {
     private final double x;
     private final double y;
     private final double z;
+
+    @Override
+    public double x() {
+        return x;
+    }
+
+    @Override
+    public double y() {
+        return y;
+    }
+
+    @Override
+    public double z() {
+        return z;
+    }
 
     @Override
     public double getRenderX() {
@@ -43,11 +59,24 @@ public abstract class Abstract3dNode<N extends Abstract3dNode<N>> implements Pat
 
     @Override
     public int compareTo(@NotNull N other) {
-        int result = Double.compare(this.getY(), other.getY());
+        return positionCompare(other);
+    }
+
+    @Override
+    public String toString() {
+        return "3d(" + x + ", " + y + ", " + z + ')';
+    }
+
+    public boolean positionEquals(@NotNull Position position) {
+        return positionCompare(position) == 0;
+    }
+
+    public int positionCompare(@NotNull Position position) {
+        int result = Double.compare(this.y(), position.y());
         if (result == 0) {
-            result = Double.compare(this.getZ(), other.getZ());
+            result = Double.compare(this.z(), position.z());
             if (result == 0) {
-                result = Double.compare(this.getX(), other.getX());
+                result = Double.compare(this.x(), position.x());
             }
         }
 

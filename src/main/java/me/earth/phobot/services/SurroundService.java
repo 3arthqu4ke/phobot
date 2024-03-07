@@ -5,7 +5,7 @@ import me.earth.phobot.event.PostMotionPlayerUpdateEvent;
 import me.earth.phobot.modules.combat.Surround;
 import me.earth.phobot.util.time.StopWatch;
 import me.earth.pingbypass.api.event.SubscriberImpl;
-import me.earth.pingbypass.commons.event.SafeListener;
+import me.earth.pingbypass.api.event.SafeListener;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;

@@ -7,8 +7,8 @@ import me.earth.pingbypass.PingBypass;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.module.impl.ModuleImpl;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.commons.event.SafeListener;
-import me.earth.pingbypass.commons.event.network.PacketEvent;
+import me.earth.pingbypass.api.event.SafeListener;
+import me.earth.pingbypass.api.event.network.PacketEvent;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -48,7 +48,7 @@ public class Criticals extends ModuleImpl {
                         player.connection.send(new ServerboundMovePlayerPacket.Pos(player.getX(), player.getY() + 0.03, player.getZ(), false));
                         player.connection.send(new ServerboundMovePlayerPacket.Pos(player.getX(), player.getY(), player.getZ(), false));
                     }
-                    // TODO: service that listens to packets send and then fixes lastX, Y, Z, YRot, XRot and onGround?
+
                     ((ILocalPlayer) player).setLastOnGround(false);
                     timer.reset();
                 }

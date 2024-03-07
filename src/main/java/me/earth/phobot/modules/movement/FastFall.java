@@ -6,7 +6,7 @@ import me.earth.phobot.modules.PhobotModule;
 import me.earth.phobot.util.player.MovementPlayer;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.commons.event.SafeListener;
+import me.earth.pingbypass.api.event.SafeListener;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -26,7 +26,10 @@ public class FastFall extends PhobotModule {
         listen(new SafeListener<MoveEvent>(mc, -1000) {
             @Override
             public void onEvent(MoveEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
-                if (!mc.options.keyJump.isDown() && !mc.options.keyShift.isDown() && canFastFall(player, event.getVec(), level, speed.isEnabled())) {
+                if (!phobot.getPathfinder().isFollowingPath()
+                        && !mc.options.keyJump.isDown()
+                        && !mc.options.keyShift.isDown()
+                        && canFastFall(player, event.getVec(), level, speed.isEnabled())) {
                     event.setVec(getFastFallVec(event.getVec()));
                 }
             }
@@ -40,6 +43,7 @@ public class FastFall extends PhobotModule {
 
     public boolean canFastFall(Player player, Vec3 delta, ClientLevel level, boolean speedIsOn) {
         double nearestBlockBelow;
+        // TODO: phobot.getLagbackService?
         return !speedIsOn
                 && !phobot.getMovementService().getMovement().shouldNotUseMovementHacks(player)
                 && player.fallDistance < 0.5

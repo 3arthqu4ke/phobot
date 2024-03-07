@@ -12,7 +12,7 @@ import me.earth.phobot.util.entity.EntityUtil;
 import me.earth.phobot.util.math.PositionUtil;
 import me.earth.phobot.util.world.BlockStateLevel;
 import me.earth.pingbypass.api.module.impl.Categories;
-import me.earth.pingbypass.commons.event.SafeListener;
+import me.earth.pingbypass.api.event.SafeListener;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;

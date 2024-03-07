@@ -1,6 +1,7 @@
 package me.earth.phobot.util.math;
 
 import lombok.experimental.UtilityClass;
+import me.earth.phobot.pathfinder.algorithm.Abstract3iNode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Position;
@@ -30,7 +31,6 @@ public class PositionUtil {
     }
 
     public static Set<BlockPos> getPositionsBlockedByEntityAtY(Entity entity, double y) {
-        AABB bb = entity.getBoundingBox();
         Set<BlockPos> positions = new HashSet<>();
         getPositionsBlockedByEntityAtY(positions, entity, y);
         return positions;
@@ -62,6 +62,10 @@ public class PositionUtil {
 
     public static String toSimpleString(Position position) {
         return position.x() + ", " + position.y() + ", " + position.z();
+    }
+
+    public static String toSimpleString(Abstract3iNode<?> position) {
+        return position.getX() + ", " + position.getX() + ", " + position.getZ();
     }
 
     public static double getMaxYAtPosition(BlockPos.MutableBlockPos pos, Level level) {

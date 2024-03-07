@@ -3,6 +3,7 @@ package me.earth.phobot.pathfinder.algorithm;
 import lombok.Data;
 import me.earth.phobot.util.math.MathUtil;
 import net.minecraft.core.SectionPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 
@@ -55,12 +56,25 @@ public abstract class Abstract3iNode<N extends Abstract3iNode<N>> implements Pat
         return this.getY() - other.getY();
     }
 
+    @Override
+    public String toString() {
+        return "3i(" + x + ", " + y + ", " + z + ')';
+    }
+
     public double distanceSq(Vec3 vec) {
         return distanceSq(vec.x, vec.y, vec.z);
     }
 
+    public double distanceSq(Vec3i vec) {
+        return distanceSq(vec.getX(), vec.getY(), vec.getZ());
+    }
+
     public double distanceSq(double xIn, double yIn, double zIn) {
         return MathUtil.distanceSq(this.getX(), this.getY(), this.getZ(), xIn, yIn, zIn);
+    }
+
+    public double distanceSqToCenter(double xIn, double yIn, double zIn) {
+        return MathUtil.distanceSq(this.getX() + 0.5, this.getY(), this.getZ() + 0.5, xIn, yIn, zIn);
     }
 
 }

@@ -5,8 +5,8 @@ import me.earth.pingbypass.PingBypass;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.module.impl.ModuleImpl;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.commons.event.network.PacketEvent;
-import me.earth.pingbypass.commons.event.network.SendListener;
+import me.earth.pingbypass.api.event.network.PacketEvent;
+import me.earth.pingbypass.api.event.network.SendListener;
 import net.minecraft.network.protocol.game.ServerboundSwingPacket;
 import net.minecraft.world.InteractionHand;
 

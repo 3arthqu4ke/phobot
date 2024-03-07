@@ -3,7 +3,7 @@ package me.earth.phobot.services;
 import me.earth.phobot.util.world.EntityCopyingLevel;
 import me.earth.pingbypass.api.event.SubscriberImpl;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
-import me.earth.pingbypass.commons.event.loop.TickEvent;
+import me.earth.pingbypass.api.event.loop.TickEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import org.jetbrains.annotations.Nullable;

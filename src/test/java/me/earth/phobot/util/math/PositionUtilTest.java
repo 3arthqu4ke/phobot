@@ -2,6 +2,7 @@ package me.earth.phobot.util.math;
 
 import lombok.SneakyThrows;
 import me.earth.phobot.TestUtil;
+import me.earth.phobot.pathfinder.mesh.NavigationMeshManagerTest;
 import me.earth.phobot.util.world.BlockStateLevel;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -33,6 +34,11 @@ public class PositionUtilTest {
             level.getMap().put(pos.immutable(), Blocks.ACACIA_FENCE.defaultBlockState());
             pos.set(0, 1, 0);
             assertEquals(1.5, PositionUtil.getMaxYAtPosition(pos, level));
+
+            var meshManager = NavigationMeshManagerTest.createNavigationMeshManager();
+            NavigationMeshManagerTest.setupMesh(level, meshManager);
+            assertEquals(2.0, PositionUtil.getMaxYAtPosition(new BlockPos.MutableBlockPos(0, 2, 0), level));
+            assertEquals(1.5, PositionUtil.getMaxYAtPosition(new BlockPos.MutableBlockPos(0, 1, 0), level));
         }
     }
 

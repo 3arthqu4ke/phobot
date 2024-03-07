@@ -24,8 +24,8 @@ import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
 import me.earth.pingbypass.api.setting.impl.Complexities;
-import me.earth.pingbypass.commons.event.SafeListener;
-import me.earth.pingbypass.commons.event.network.PacketEvent;
+import me.earth.pingbypass.api.event.SafeListener;
+import me.earth.pingbypass.api.event.network.PacketEvent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
@@ -239,6 +239,10 @@ public class Speedmine extends PhobotModule {
             }
         }
 
+        if (currentPos == null) {
+            return;
+        }
+
         currentState = level.getBlockState(currentPos);
         renderBBs = currentState.getShape(level, currentPos).toAabbs();
         if (canMine(currentPos, currentState, player, level)) {
@@ -404,7 +408,7 @@ public class Speedmine extends PhobotModule {
             PredictionUtil.predict(level, seq -> {
                 player.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, currentPos, currentDirection, seq));
                 if (!noGlitchBlocks.getValue() && mc.gameMode != null) {
-                    mc.gameMode.destroyBlock(currentPos);
+                    mc.submit(() -> mc.gameMode.destroyBlock(currentPos));
                 }
             });
 

@@ -1,8 +1,8 @@
 package me.earth.phobot.services;
 
 import me.earth.pingbypass.api.event.SubscriberImpl;
-import me.earth.pingbypass.commons.event.network.PacketEvent;
-import me.earth.pingbypass.commons.event.network.PostListener;
+import me.earth.pingbypass.api.event.network.PacketEvent;
+import me.earth.pingbypass.api.event.network.PostListener;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;

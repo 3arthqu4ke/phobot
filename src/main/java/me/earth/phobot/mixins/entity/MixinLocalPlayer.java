@@ -6,7 +6,9 @@ import me.earth.phobot.event.PathfinderUpdateEvent;
 import me.earth.phobot.event.PostMotionPlayerUpdateEvent;
 import me.earth.phobot.event.PreMotionPlayerUpdateEvent;
 import me.earth.phobot.modules.movement.NoSlowDown;
+import me.earth.phobot.modules.movement.Velocity;
 import me.earth.pingbypass.PingBypassApi;
+import me.earth.pingbypass.api.util.mixin.MixinHelper;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
@@ -58,6 +60,11 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
         MoveEvent event = new MoveEvent(moveVec);
         PingBypassApi.getEventBus().post(event);
         return event.getVec();
+    }
+
+    @Inject(method = "moveTowardsClosestSpace", at = @At("HEAD"), cancellable = true)
+    private void moveTowardsClosestSpaceHook(double d, double e, CallbackInfo ci) {
+        MixinHelper.hook(new Velocity.PushOutOfBlocks(), ci);
     }
 
 }

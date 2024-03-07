@@ -15,8 +15,8 @@ import me.earth.phobot.util.math.PositionUtil;
 import me.earth.phobot.util.time.TimeUtil;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.commons.event.SafeListener;
-import me.earth.pingbypass.commons.event.network.PostListener;
+import me.earth.pingbypass.api.event.SafeListener;
+import me.earth.pingbypass.api.event.network.PostListener;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -39,6 +39,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
+// TODO: does not work when we are inside a block!!
 @Slf4j
 @Getter
 public class Surround extends BlockPlacingModule implements FindsShortestPath {
@@ -144,7 +145,8 @@ public class Surround extends BlockPlacingModule implements FindsShortestPath {
             if (underPlayer.size() > 1) { // prevents unnecessary extensions, 3arth4ck used "createBlocked" for this with lots of code
                 BlockPos above = pos.above();
                 BlockState state = level.getBlockState(above);
-                if (state.canBeReplaced() && !isBlockedByEntity(above, block.defaultBlockState().getCollisionShape(level, above), player, level, e -> false, ((p,e) -> {/*do not set crystal*/}))) {
+                if (state.canBeReplaced()
+                        && !isBlockedByEntity(above, block.defaultBlockState().getCollisionShape(level, above), player, level, e -> false, ((p,e) -> {/*do not set crystal*/}))) {
                     continue;
                 } else if (blockedUnderPlayer.size() == 3 && !state.canBeReplaced() && !unblockedUnderPlayer.contains(above)) {
                     continue;
@@ -237,6 +239,8 @@ public class Surround extends BlockPlacingModule implements FindsShortestPath {
             positions.add(surroundPos);
         }
 
+        // TODO: this gets taken into account by SurroundService and should not be part of the Surround!!!!!!
+        //  MAKE THIS A SEPARATE MODULE!
         if (antiFacePlace.getValue() && EntityUtil.getHealth(player) < 8.0f) {
             BlockPos antiFacePlacePos = surroundPos.above();
             if (level.getBlockState(antiFacePlacePos).canBeReplaced()) {

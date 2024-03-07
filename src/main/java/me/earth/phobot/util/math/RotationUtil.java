@@ -42,6 +42,10 @@ public class RotationUtil {
         return getRotations(entity.getX(), entity.getEyeY(), entity.getZ(), target.getX(), target.getY() + target.getEyeHeight() / 2.0, target.getZ(), entity.yRotO);
     }
 
+    public static float[] getRotations(Entity entity, Vec3 vec) {
+        return getRotations(entity.getX(), entity.getEyeY(), entity.getZ(), vec.x, vec.y, vec.z, entity.yRotO);
+    }
+
     public static float[] getRotations(Entity entity, double toX, double toY, double toZ) {
         return getRotations(entity.getX(), entity.getEyeY(), entity.getZ(), toX, toY, toZ, entity.yRotO);
     }

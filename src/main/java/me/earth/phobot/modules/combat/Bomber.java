@@ -14,20 +14,23 @@ import me.earth.phobot.services.inventory.InventoryContext;
 import me.earth.phobot.util.ResetUtil;
 import me.earth.phobot.util.entity.EntityUtil;
 import me.earth.phobot.util.math.PositionUtil;
+import me.earth.phobot.util.math.RaytraceUtil;
+import me.earth.phobot.util.math.RotationUtil;
 import me.earth.phobot.util.mutables.MutPos;
 import me.earth.phobot.util.time.TimeUtil;
 import me.earth.phobot.util.world.BlockStateLevel;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.commons.event.SafeListener;
-import me.earth.pingbypass.commons.event.network.PacketEvent;
+import me.earth.pingbypass.api.event.SafeListener;
+import me.earth.pingbypass.api.event.network.PacketEvent;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -41,11 +44,19 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+// TODO: rotation optimizer, rotate so that we hit the block at the legit spot, but the ray also hits the crystal?
+// TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// TODO: Does not seem to quite work yet with crystal rotations?!
 // TODO: Check whether CrystalPlacer.place has been successful or not!
+// TODO: attack rotations!
+
 // TODO: stop bombing ourselves!
 // TODO: Anvil Bomber
 // TODO: distance to target player!!!
 // TODO: Spam crystals against surround without AutoCrystal calculation
+/**
+ * Uses crystals together with {@link Speedmine} to damage enemies.
+ */
 @Slf4j
 public class Bomber extends BlockPlacingModule {
     private final Setting<Boolean> packetRotations = bool("PacketRotations", false, "Uses packet rotations to place crystals if you are safe.");
@@ -85,6 +96,7 @@ public class Bomber extends BlockPlacingModule {
                 if (crystal != null && (crystalEntity = crystal.getCrystals()[0]) != null) {
                     phobot.getInventoryService().use(context -> {
                         if (breakBlock(context, event.getPos(), event.getPlayer(), event.getLevel(), event.getGameMode())) {
+                            rotateForAttacking(event.getPlayer(), crystalEntity);
                             phobot.getAttackService().attack(event.getPlayer(), crystalEntity);
                             CrystalPosition surroundBlockingPos = findPositionToBlockSurround(positions, event.getPos(), level, event.getPlayer());
                             if (surroundBlockingPos != null) {
@@ -140,7 +152,11 @@ public class Bomber extends BlockPlacingModule {
 
                         entity.setId(event.getPacket().getId());
                         phobot.getInventoryService().use(context -> {
-                            breakBlock(context, currentSpeedminePos, player, level, gameMode);
+                            if (!breakBlock(context, currentSpeedminePos, player, level, gameMode)) {
+                                log.error("Failed to break block when crystal spawned?!");
+                            }
+
+                            rotateForAttacking(player, entity);
                             phobot.getAttackService().attack(player, entity);
                             var customBlockStateLevel = new BlockStateLevel.Delegating(level);
                             CrystalPosition surroundBlockingPos = findPositionToBlockSurround(positions, currentSpeedminePos, customBlockStateLevel, player);
@@ -174,6 +190,22 @@ public class Bomber extends BlockPlacingModule {
         currentSpeedminePos = null;
         currentCrystalPos = null;
         time = 0L;
+    }
+
+    // TODO: this!
+    private boolean rotateForAttacking(LocalPlayer player, Entity entity) {
+        if (phobot.getAntiCheat().getAttackRotations().getValue() && !RaytraceUtil.areRotationsLegit(phobot, entity)) {
+            // TODO: what if we cant PacketRotate?
+            if (canUsePacketRotations()) {
+                float[] rotations = RotationUtil.getRotations(phobot.getLocalPlayerPositionService().getPlayerOnLastPosition(player), entity);
+                player.connection.send(new ServerboundMovePlayerPacket.Rot(rotations[0], rotations[1], player.onGround()));
+                return true;
+            }
+
+            return false;
+        }
+
+        return true;
     }
 
     private boolean breakBlock(InventoryContext context, BlockPos pos, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {

@@ -76,6 +76,7 @@ class HoleTask extends AbstractInvalidationTask<Hole, HoleManager> implements Ho
                     return;
                 }
 
+                // TODO: track safety for 2x1 holes!
                 _2x1 = true;
                 //   x a a
                 //     x x <-

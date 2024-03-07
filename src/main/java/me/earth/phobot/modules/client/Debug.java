@@ -18,7 +18,7 @@ import me.earth.phobot.util.time.TimeUtil;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.commons.event.SafeListener;
+import me.earth.pingbypass.api.event.SafeListener;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
@@ -49,6 +49,7 @@ public class Debug extends PhobotModule {
 
     public Debug(Phobot phobot) {
         super(phobot, "Debug", Categories.CLIENT, "For debugging purposes.");
+        this.register(phobot.getLocalPlayerPositionService().getFixLast());
         listen(new SafeListener<RenderEvent>(mc) {
             @Override
             public void onEvent(RenderEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
