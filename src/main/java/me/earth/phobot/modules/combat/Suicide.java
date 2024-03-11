@@ -1,19 +1,24 @@
 package me.earth.phobot.modules.combat;
 
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import me.earth.phobot.Phobot;
+import me.earth.phobot.modules.combat.autocrystal.AutoCrystal;
 import me.earth.phobot.modules.combat.autocrystal.Calculation;
 import me.earth.phobot.modules.combat.autocrystal.CrystalPlacingModule;
 import me.earth.phobot.services.SurroundService;
 import me.earth.phobot.util.ResetUtil;
 import me.earth.phobot.util.time.StopWatch;
-import me.earth.pingbypass.api.module.impl.Categories;
-import me.earth.pingbypass.api.setting.Setting;
+import me.earth.pingbypass.api.command.CommandSource;
+import me.earth.pingbypass.api.command.impl.module.HasCustomModuleCommand;
 import me.earth.pingbypass.api.event.SafeListener;
 import me.earth.pingbypass.api.event.loop.TickEvent;
+import me.earth.pingbypass.api.module.impl.Categories;
+import me.earth.pingbypass.api.setting.Setting;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.InventoryMenu;
@@ -21,7 +26,9 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 
-public class Suicide extends CrystalPlacingModule {
+import static me.earth.pingbypass.api.command.CommandSource.literal;
+
+public class Suicide extends CrystalPlacingModule implements HasCustomModuleCommand {
     private final Setting<Boolean> command = boolBuilder("Command", false).withDescription("Uses a command instead of crystals to kill you.").build();
     private final Setting<Boolean> armor = boolBuilder("Armor", true).withDescription("Throws away your armor and totems.").build();
     private final StopWatch.ForSingleThread throwTimer = new StopWatch.ForSingleThread();
@@ -106,6 +113,29 @@ public class Suicide extends CrystalPlacingModule {
                 return enemy == player;
             }
         };
+    }
+
+    @Override
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public void build(LiteralArgumentBuilder<CommandSource> builder) {
+        builder.then(literal("SyncWithAutoCrystal").executes(ctx -> {
+            AutoCrystal autoCrystal = getPingBypass().getModuleManager().getByClass(AutoCrystal.class).orElse(null);
+            if (autoCrystal != null) {
+                for (Setting setting : autoCrystal) {
+                    if ("Enabled".equalsIgnoreCase(setting.getName()) || "Bind".equalsIgnoreCase(setting.getName())) {
+                        continue;
+                    }
+
+                    syncSetting(setting, setting.getType());
+                }
+
+                getPingBypass().getChat().send(Component.literal("Synced Suicide with AutoCrystal successfully."), "SuicideSync");
+            }
+        }));
+    }
+
+    private <T> void syncSetting(Setting<T> autoCrystalSetting, Class<T> type) {
+        getSetting(autoCrystalSetting.getName(), type).ifPresent(ourSetting -> ourSetting.setValue(autoCrystalSetting.getValue()));
     }
 
 }

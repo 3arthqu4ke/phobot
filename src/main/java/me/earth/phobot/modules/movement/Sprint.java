@@ -1,13 +1,13 @@
 package me.earth.phobot.modules.movement;
 
+import me.earth.phobot.modules.PhobotNameSpacedModule;
 import me.earth.pingbypass.PingBypass;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
-import me.earth.pingbypass.api.module.impl.Categories;
-import me.earth.pingbypass.api.module.impl.ModuleImpl;
 import me.earth.pingbypass.api.event.loop.LocalPlayerUpdateEvent;
+import me.earth.pingbypass.api.module.impl.Categories;
 import net.minecraft.client.player.LocalPlayer;
 
-public class Sprint extends ModuleImpl {
+public class Sprint extends PhobotNameSpacedModule {
     public Sprint(PingBypass pingBypass) {
         super(pingBypass, "Sprint", Categories.MOVEMENT, "Makes you always sprint.");
         listen(new Listener<LocalPlayerUpdateEvent>() {

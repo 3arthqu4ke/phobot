@@ -24,6 +24,8 @@ public class LevelBoundTaskManager extends SubscriberImpl {
                 cancelAll();
             }
         });
+
+        // TODO: respawn event too?
     }
 
     @Synchronized

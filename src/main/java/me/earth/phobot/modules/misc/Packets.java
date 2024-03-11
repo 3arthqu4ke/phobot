@@ -1,18 +1,18 @@
 package me.earth.phobot.modules.misc;
 
+import me.earth.phobot.modules.PhobotNameSpacedModule;
 import me.earth.pingbypass.PingBypass;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
-import me.earth.pingbypass.api.module.impl.Categories;
-import me.earth.pingbypass.api.module.impl.ModuleImpl;
-import me.earth.pingbypass.api.setting.Setting;
 import me.earth.pingbypass.api.event.network.PacketEvent;
+import me.earth.pingbypass.api.module.impl.Categories;
+import me.earth.pingbypass.api.setting.Setting;
 import net.minecraft.network.protocol.common.*;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 // TODO: remove, this is a bad idea?
-public class Packets extends ModuleImpl {
+public class Packets extends PhobotNameSpacedModule {
     private final AtomicInteger processingPosition = new AtomicInteger();
 
     public Packets(PingBypass pingBypass) {

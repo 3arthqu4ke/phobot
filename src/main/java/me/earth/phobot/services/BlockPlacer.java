@@ -15,8 +15,8 @@ import me.earth.phobot.util.math.RaytraceUtil;
 import me.earth.phobot.util.math.RotationUtil;
 import me.earth.phobot.util.world.BlockStateLevel;
 import me.earth.phobot.util.world.PredictionUtil;
-import me.earth.pingbypass.api.event.SubscriberImpl;
 import me.earth.pingbypass.api.event.SafeListener;
+import me.earth.pingbypass.api.event.SubscriberImpl;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
@@ -187,6 +187,10 @@ public class BlockPlacer extends SubscriberImpl {
         }
     }
 
+    public interface ActionListener {
+        void onActionExecutedSuccessfully(Action action);
+    }
+
     @Data
     public static class Action implements ChecksBlockPlacingValidity {
         private final Object module;
@@ -299,6 +303,10 @@ public class BlockPlacer extends SubscriberImpl {
             });
 
             player.swing(switchResult.hand());
+            if (module instanceof ActionListener actionListener) {
+                actionListener.onActionExecutedSuccessfully(this);
+            }
+
             return true;
         }
 

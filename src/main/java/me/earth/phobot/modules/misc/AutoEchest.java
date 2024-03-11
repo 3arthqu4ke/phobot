@@ -1,5 +1,6 @@
 package me.earth.phobot.modules.misc;
 
+import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
 import me.earth.phobot.modules.BlockPlacingModule;
 import me.earth.phobot.modules.combat.AutoMine;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 
 // TODO: check for enemies that could pick up
+@Slf4j
 public class AutoEchest extends BlockPlacingModule {
     public static final Direction[] DIRECTIONS_NO_DOWN = new Direction[] { Direction.UP, Direction.NORTH, Direction.WEST, Direction.EAST, Direction.SOUTH };
     private final Setting<BlockMode> block = constant("Block", BlockMode.Full, "Places a block so that the item will drop towards us.");
@@ -62,6 +64,8 @@ public class AutoEchest extends BlockPlacingModule {
             }
 
             blockAndPlace(speedminePos, player, level);
+            return;
+        } else if (speedminePos != null && level.getBlockState(speedminePos).is(Blocks.ENDER_CHEST)) {
             return;
         }
 

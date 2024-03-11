@@ -2,6 +2,7 @@ package me.earth.phobot.pathfinder.render;
 
 import lombok.AccessLevel;
 import lombok.Getter;
+import me.earth.phobot.Phobot;
 import me.earth.phobot.event.RenderEvent;
 import me.earth.phobot.pathfinder.algorithm.Algorithm;
 import me.earth.phobot.pathfinder.algorithm.PathfindingNode;
@@ -16,6 +17,11 @@ import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import java.awt.*;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Renders {@link RenderableAlgorithm}s.
+ *
+ * @param <T> the type of PathfindingNode used by the Algorithm to render.
+ */
 public class AlgorithmRenderer<T extends PathfindingNode<T>> extends SubscriberImpl {
     @Getter(AccessLevel.PROTECTED)
     private final RenderableAlgorithm<T> algorithm;
@@ -77,6 +83,14 @@ public class AlgorithmRenderer<T extends PathfindingNode<T>> extends SubscriberI
         }
     }
 
+    /**
+     * Subscribes a new {@link AlgorithmRenderer} on the given EventBus until the Algorithm has been completed.
+     *
+     * @param future the future representing the completion of the Algorithm.
+     * @param eventBus the eventBus to subscribe the renderer on. For unloading, it is important that {@link Phobot#getUnloadingEventBus()} is used!
+     * @param algorithm the algorithm to render.
+     * @param <T> the type of PathfindingNode used by the Algorithm.
+     */
     public static <T extends PathfindingNode<T>> void render(CompletableFuture<?> future, EventBus eventBus, Algorithm<T> algorithm) {
         AlgorithmRenderer<T> renderer = new AlgorithmRenderer<>(algorithm);
         eventBus.subscribe(renderer);

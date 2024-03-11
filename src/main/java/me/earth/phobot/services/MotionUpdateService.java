@@ -3,33 +3,36 @@ package me.earth.phobot.services;
 import lombok.Getter;
 import me.earth.phobot.event.PostMotionPlayerUpdateEvent;
 import me.earth.phobot.event.PreMotionPlayerUpdateEvent;
-import me.earth.pingbypass.api.event.SubscriberImpl;
 import me.earth.pingbypass.api.event.SafeListener;
+import me.earth.pingbypass.api.event.SubscriberImpl;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.Position;
 
+/**
+ * Allows you to spoof Position and rotation during a {@link PreMotionPlayerUpdateEvent}.
+ * Spoofed changes will be reset on {@link PostMotionPlayerUpdateEvent}.
+ */
 @Getter
 public class MotionUpdateService extends SubscriberImpl {
-    private double changedX;
-    private double changedY;
-    private double changedZ;
     private double x;
     private double y;
     private double z;
-
-    private float changedXRot;
-    private float changedYRot;
     private float yRot;
     private float xRot;
-
-    private boolean changedOnground;
     private boolean onGround;
 
-    private boolean inPreUpdate;
+    private double changedX;
+    private double changedY;
+    private double changedZ;
+    private float changedYRot;
+    private float changedXRot;
+    private boolean changedOnGround;
     boolean spoofing;
+
+    private boolean inPreUpdate;
 
     private float yRotO = 0.0f;
     private float xRotO = 0.0f;
@@ -59,7 +62,7 @@ public class MotionUpdateService extends SubscriberImpl {
                 changedZ = player.getZ();
                 changedYRot = player.getYRot();
                 changedXRot = player.getXRot();
-                changedOnground = player.onGround();
+                changedOnGround = player.onGround();
                 inPreUpdate = false;
             }
         });
@@ -67,27 +70,9 @@ public class MotionUpdateService extends SubscriberImpl {
         listen(new SafeListener<PostMotionPlayerUpdateEvent>(mc, Integer.MIN_VALUE) {
             @Override
             public void onEvent(PostMotionPlayerUpdateEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
-                double playerX = player.getX();
-                double playerY = player.getY();
-                double playerZ = player.getZ();
-                boolean changed = false;
-                if (player.getX() == changedX) {
-                    changed = true;
-                    playerX = x;
-                }
-
-                if (player.getY() == changedY) {
-                    changed = true;
-                    playerY = y;
-                }
-
-                if (player.getZ() == changedZ) {
-                    changed = true;
-                    playerZ = z;
-                }
-
-                if (changed) {
-                    player.setPos(playerX, playerY, playerZ);
+                // this allows us to detect if other clients have spoofed our position or if we have spoofed without this service to set the position permanently
+                if (player.getX() == changedX && player.getY() == changedY && player.getZ() == changedZ) {
+                    player.setPos(x, y, z);
                 }
 
                 if (player.getXRot() == changedXRot) {
@@ -98,7 +83,7 @@ public class MotionUpdateService extends SubscriberImpl {
                     player.setYRot(yRot);
                 }
 
-                if (player.onGround() == changedOnground) {
+                if (player.onGround() == changedOnGround) {
                     player.setOnGround(onGround);
                 }
             }
@@ -115,13 +100,9 @@ public class MotionUpdateService extends SubscriberImpl {
     public void setPosition(LocalPlayer player, double x, double y, double z) {
         if (inPreUpdate) {
             player.setPos(x, y, z);
-            spoofing = true;
-        }
-    }
-
-    public void setOnGround(LocalPlayer player, boolean onGround) {
-        if (inPreUpdate) {
-            player.setOnGround(onGround);
+            changedX = x;
+            changedY = y;
+            changedZ = z;
             spoofing = true;
         }
     }
@@ -130,6 +111,16 @@ public class MotionUpdateService extends SubscriberImpl {
         if (inPreUpdate) {
             player.setYRot(yRot);
             player.setXRot(xRot);
+            changedYRot = yRot;
+            changedXRot = xRot;
+            spoofing = true;
+        }
+    }
+
+    public void setOnGround(LocalPlayer player, boolean onGround) {
+        if (inPreUpdate) {
+            player.setOnGround(onGround);
+            changedOnGround = onGround;
             spoofing = true;
         }
     }

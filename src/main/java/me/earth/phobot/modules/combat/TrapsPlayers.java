@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 public interface TrapsPlayers extends ChecksBlockPlacingValidity, FindsShortestPath {
     Map<BlockPos, Long> getBlackList();
 
-    boolean placePos(BlockPos pos, Block block, LocalPlayer player, ClientLevel level);
+    boolean placePos(BlockPos pos, Block block, Player player, ClientLevel level);
 
     default double getY(Player player) {
         return player.getBoundingBox().maxY;

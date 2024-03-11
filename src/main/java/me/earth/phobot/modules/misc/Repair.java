@@ -8,11 +8,11 @@ import me.earth.phobot.services.StealingDetectionService;
 import me.earth.phobot.services.inventory.InventoryContext;
 import me.earth.phobot.util.math.RotationUtil;
 import me.earth.phobot.util.mutables.MutVec3;
+import me.earth.pingbypass.api.event.SafeListener;
 import me.earth.pingbypass.api.input.Key;
 import me.earth.pingbypass.api.input.Keys;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.api.event.SafeListener;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -48,10 +48,7 @@ public class Repair extends PhobotModule {
                             && (criticality.criticality == 2 || (criticality.totalDurabilityMissing > 0.3f && !stealingDetectionService.couldDropsGetStolen(player, level)))
                                     || middleClickExp.getValue() && phobot.getPingBypass().getKeyBoardAndMouse().isPressed(Key.Type.MOUSE, Keys.MOUSE_3)) {
                         if (rotate.getValue()) {
-                            vec.set(player.getDeltaMovement());
-                            vec.normalize();
-                            vec.scale(player.getEyeHeight());
-                            float[] rotations = RotationUtil.getRotations(player, player.getX() + vec.getX(), player.getY() + vec.getY(), player.getZ() + vec.getZ());
+                            float[] rotations = RotationUtil.lookIntoMoveDirection(player, vec);
                             phobot.getMotionUpdateService().rotate(player, rotations[0], rotations[1]);
                         }
 

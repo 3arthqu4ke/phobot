@@ -1,13 +1,13 @@
 package me.earth.phobot.modules.misc;
 
+import me.earth.phobot.modules.PhobotNameSpacedModule;
 import me.earth.phobot.util.math.MathUtil;
 import me.earth.phobot.util.time.StopWatch;
 import me.earth.pingbypass.PingBypass;
-import me.earth.pingbypass.api.module.impl.Categories;
-import me.earth.pingbypass.api.module.impl.ModuleImpl;
-import me.earth.pingbypass.api.setting.Setting;
 import me.earth.pingbypass.api.event.SafeListener;
 import me.earth.pingbypass.api.event.loop.GameloopEvent;
+import me.earth.pingbypass.api.module.impl.Categories;
+import me.earth.pingbypass.api.setting.Setting;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -15,7 +15,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundSwingPacket;
 import net.minecraft.world.InteractionHand;
 
-public class PacketSpam extends ModuleImpl {
+public class PacketSpam extends PhobotNameSpacedModule {
     private final Setting<Mode> mode = constant("Mode", Mode.Swing, "The type of packets to send.");
     private final Setting<Integer> delay = number("Delay", 1000, 0, 10_000, "Delay in milliseconds with which we send the batches of packets.");
     private final Setting<Integer> packets = number("Packets", 1, 1, 100_000, "The amount of packets to send every time.");

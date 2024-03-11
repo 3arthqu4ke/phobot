@@ -7,6 +7,7 @@ import me.earth.phobot.event.PostMotionPlayerUpdateEvent;
 import me.earth.phobot.event.PreMotionPlayerUpdateEvent;
 import me.earth.phobot.modules.PhobotModule;
 import me.earth.phobot.services.PlayerPosition;
+import me.earth.phobot.util.InventoryUtil;
 import me.earth.phobot.util.ResetUtil;
 import me.earth.phobot.util.entity.EntityUtil;
 import me.earth.phobot.util.math.MathUtil;
@@ -14,10 +15,10 @@ import me.earth.phobot.util.math.PositionUtil;
 import me.earth.phobot.util.math.RaytraceUtil;
 import me.earth.phobot.util.math.RotationUtil;
 import me.earth.phobot.util.player.MovementPlayer;
+import me.earth.pingbypass.api.event.SafeListener;
 import me.earth.pingbypass.api.gui.hud.DisplaysHudInfo;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.api.event.SafeListener;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -33,14 +34,11 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.ThrownExperienceBottle;
-import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
 import org.jetbrains.annotations.Nullable;
 
-// TODO: try out silent!
 public class KillAura extends PhobotModule implements DisplaysHudInfo {
     private final Setting<Boolean> teleport = bool("Teleport", true, "Teleports a bit to hit players that are outside of your range.");
     private final Setting<Boolean> weapon = bool("Weapon", true, "Only attacks if you are holding a Sword or an Axe.");
@@ -93,8 +91,7 @@ public class KillAura extends PhobotModule implements DisplaysHudInfo {
                 || attacked
                 || player.isSpectator()
                 || player.getAttackStrengthScale(0.5f) < 1.0f
-                || weapon.getValue() && !(player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof SwordItem
-                                            || player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof AxeItem)) {
+                || weapon.getValue() && !InventoryUtil.isHoldingWeapon(player)) {
             return;
         }
 

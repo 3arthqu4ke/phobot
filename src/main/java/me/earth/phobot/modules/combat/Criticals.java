@@ -2,13 +2,13 @@ package me.earth.phobot.modules.combat;
 
 import me.earth.phobot.ducks.IServerboundInteractPacket;
 import me.earth.phobot.mixins.entity.ILocalPlayer;
+import me.earth.phobot.modules.PhobotNameSpacedModule;
 import me.earth.phobot.util.time.StopWatch;
 import me.earth.pingbypass.PingBypass;
-import me.earth.pingbypass.api.module.impl.Categories;
-import me.earth.pingbypass.api.module.impl.ModuleImpl;
-import me.earth.pingbypass.api.setting.Setting;
 import me.earth.pingbypass.api.event.SafeListener;
 import me.earth.pingbypass.api.event.network.PacketEvent;
+import me.earth.pingbypass.api.module.impl.Categories;
+import me.earth.pingbypass.api.setting.Setting;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -18,7 +18,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 
 // TODO: fix the onGround packets being weird with Speedmine?!
-public class Criticals extends ModuleImpl {
+public class Criticals extends PhobotNameSpacedModule {
     private final Setting<Mode> twoPackets = constant("Mode", Mode.Many, "How many packets to use.");
     private final StopWatch.ForSingleThread timer = new StopWatch.ForSingleThread();
 

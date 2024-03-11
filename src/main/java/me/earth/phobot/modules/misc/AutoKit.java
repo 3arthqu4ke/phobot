@@ -5,10 +5,10 @@ import me.earth.phobot.modules.PhobotModule;
 import me.earth.phobot.services.TaskService;
 import me.earth.phobot.util.time.StopWatch;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
-import me.earth.pingbypass.api.module.impl.Categories;
-import me.earth.pingbypass.api.setting.Setting;
 import me.earth.pingbypass.api.event.network.PacketEvent;
 import me.earth.pingbypass.api.event.network.PostListener;
+import me.earth.pingbypass.api.module.impl.Categories;
+import me.earth.pingbypass.api.setting.Setting;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -72,10 +72,10 @@ public class AutoKit extends PhobotModule {
                     killTimer.reset();
                 }
 
-                getPingBypass().getEventBus().unsubscribe(taskService);
+                phobot.getUnloadingEventBus().unsubscribe(taskService);
             });
 
-            getPingBypass().getEventBus().subscribe(taskService);
+            phobot.getUnloadingEventBus().subscribe(taskService);
         }
     }
 

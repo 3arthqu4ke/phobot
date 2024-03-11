@@ -1,14 +1,18 @@
 package me.earth.phobot.bot.behaviours;
 
 import me.earth.phobot.bot.Bot;
+import me.earth.phobot.event.PreMotionPlayerUpdateEvent;
 import me.earth.phobot.modules.combat.KillAura;
 import me.earth.phobot.modules.combat.autocrystal.AutoCrystal;
 import me.earth.phobot.util.math.RotationUtil;
 import me.earth.phobot.util.mutables.MutVec3;
+import me.earth.pingbypass.api.event.SafeListener;
 import me.earth.pingbypass.api.event.SubscriberImpl;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.event.loop.GameloopEvent;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -21,7 +25,15 @@ public class Rotate extends SubscriberImpl {
         AutoCrystal autoCrystal = bot.getModules().getAutoCrystal();
         KillAura killAura = bot.getModules().getKillAura();
         Minecraft mc = bot.getPingBypass().getMinecraft();
-        MutVec3 vec3 = new MutVec3();
+        MutVec3 vec = new MutVec3();
+        listen(new SafeListener<PreMotionPlayerUpdateEvent>(mc, 100_000) {
+            @Override
+            public void onEvent(PreMotionPlayerUpdateEvent event, LocalPlayer player, ClientLevel clientLevel, MultiPlayerGameMode multiPlayerGameMode) {
+                float[] rotations = RotationUtil.lookIntoMoveDirection(player, vec);
+                bot.getPhobot().getMotionUpdateService().rotate(player, rotations[0], rotations[1]);
+            }
+        });
+
         listen(new Listener<GameloopEvent>() {
             @Override
             public void onEvent(GameloopEvent event) {
@@ -46,12 +58,12 @@ public class Rotate extends SubscriberImpl {
                         player.setYRot(rotations[0]);
                         player.setXRot(rotations[1]);
                     } else {
-                        vec3.set(player.getDeltaMovement());
-                        vec3.normalize();
-                        vec3.scale(player.getEyeHeight());
-                        double x = Mth.lerp(mc.getFrameTime(), player.xo + vec3.getX(), player.getX() + vec3.getX());
-                        double y = Mth.lerp(mc.getFrameTime(), player.yo + vec3.getY(), player.getY() + vec3.getY());
-                        double z = Mth.lerp(mc.getFrameTime(), player.zo + vec3.getZ(), player.getZ() + vec3.getZ());
+                        vec.set(player.getDeltaMovement());
+                        vec.normalize();
+                        vec.scale(player.getEyeHeight());
+                        double x = Mth.lerp(mc.getFrameTime(), player.xo + vec.getX(), player.getX() + vec.getX());
+                        double y = Mth.lerp(mc.getFrameTime(), player.yo + vec.getY(), player.getY() + vec.getY());
+                        double z = Mth.lerp(mc.getFrameTime(), player.zo + vec.getZ(), player.getZ() + vec.getZ());
                         float[] rotations = RotationUtil.getLerpRotations(mc, player, x, y, z);
                         player.setYRot(rotations[0]);
                         player.setXRot(rotations[1]);

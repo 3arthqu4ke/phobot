@@ -3,18 +3,18 @@ package me.earth.phobot.modules.misc;
 import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.commands.arguments.PacketArgumentType;
 import me.earth.phobot.event.PacketBufferEvent;
+import me.earth.phobot.modules.PhobotNameSpacedModule;
 import me.earth.phobot.util.time.StopWatch;
 import me.earth.pingbypass.PingBypass;
 import me.earth.pingbypass.api.command.impl.arguments.ContainerArgumentType;
 import me.earth.pingbypass.api.config.impl.Parsers;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
+import me.earth.pingbypass.api.event.network.PacketEvent;
 import me.earth.pingbypass.api.module.impl.Categories;
-import me.earth.pingbypass.api.module.impl.ModuleImpl;
 import me.earth.pingbypass.api.setting.Setting;
 import me.earth.pingbypass.api.setting.impl.types.container.Container;
 import me.earth.pingbypass.api.setting.impl.types.container.ContainerSetting;
 import me.earth.pingbypass.api.traits.Nameable;
-import me.earth.pingbypass.api.event.network.PacketEvent;
 import net.minecraft.network.Connection;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.network.FriendlyByteBuf;
@@ -35,7 +35,7 @@ import java.util.Set;
 
 // TODO: deobfuscation from 3arthh4ck, Fabric even has built in support
 @Slf4j
-public class LoggerModule extends ModuleImpl {
+public class LoggerModule extends PhobotNameSpacedModule {
     private final Setting<Boolean> incoming = bool("Incoming", true, "Logs incoming packets.");
     private final Setting<Boolean> outgoing = bool("Outgoing", true, "Logs outgoing packets.");
     private final Setting<Boolean> info = bool("Info", true, "Logs detailed information about the packets.");
