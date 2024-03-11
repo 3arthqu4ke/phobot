@@ -31,6 +31,7 @@ public class FastFall extends PhobotModule {
                 if (!phobot.getPathfinder().isFollowingPath()
                         && !mc.options.keyJump.isDown()
                         && !mc.options.keyShift.isDown()
+                        && player.onGround()
                         && canFastFall(player, event.getVec(), level, speed.isEnabled())) {
                     event.setVec(getFastFallVec(event.getVec()));
                 }
