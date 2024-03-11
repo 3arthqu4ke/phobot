@@ -39,7 +39,11 @@ public class SelfTrap extends BlockPlacingModule implements TrapsPlayers, Detect
         super(phobot, phobot.getBlockPlacer(), "SelfTrap", Categories.COMBAT, "Traps you.", 0);
         this.surroundService = surroundService;
         listen(getBlackListClearListener());
-        ResetUtil.disableOnRespawnAndWorldChange(this, mc);
+        ResetUtil.onRespawnOrWorldChange(this, mc, () -> {
+            if (!auto.getValue()) {
+                this.disable();
+            }
+        });
     }
 
     @Override

@@ -1,11 +1,14 @@
 package me.earth.phobot.util.math;
 
 import lombok.experimental.UtilityClass;
+import me.earth.phobot.util.mutables.MutVec3;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.PacketListener;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -74,6 +77,13 @@ public class RotationUtil {
         }
 
         return new float[] { prevYRot + diff, pitch };
+    }
+
+    public static float[] lookIntoMoveDirection(Player player, MutVec3 vec) {
+        vec.set(player.getDeltaMovement().x, 0.0, player.getDeltaMovement().z);
+        vec.normalize();
+        vec.scale(player.getEyeHeight());
+        return getRotations(player, player.getX() + vec.getX(), player.getY(), player.getZ() + vec.getZ());
     }
 
 }

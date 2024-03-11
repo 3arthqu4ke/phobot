@@ -19,6 +19,10 @@ public class PlayerPosition extends Vec3 {
         this(0.0, 0.0, 0.0, 0.0f, 0.0f, false);
     }
 
+    public PlayerPosition(Entity entity) {
+        this(entity.getX(), entity.getY(), entity.getZ(), entity.getXRot(), entity.getYRot(), entity.onGround());
+    }
+
     public PlayerPosition(PlayerPosition position, boolean onGround) {
         this(position.getX(), position.getY(), position.getZ(), position.getXRot(), position.getYRot(), onGround);
     }

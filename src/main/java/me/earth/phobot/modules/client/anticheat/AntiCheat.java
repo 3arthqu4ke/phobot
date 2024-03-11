@@ -3,17 +3,17 @@ package me.earth.phobot.modules.client.anticheat;
 import lombok.Getter;
 import me.earth.phobot.damagecalc.DamageCalculator;
 import me.earth.phobot.damagecalc.Raytracer;
+import me.earth.phobot.modules.PhobotNameSpacedModule;
 import me.earth.phobot.services.ServerService;
 import me.earth.pingbypass.PingBypass;
 import me.earth.pingbypass.api.module.impl.Categories;
-import me.earth.pingbypass.api.module.impl.ModuleImpl;
 import me.earth.pingbypass.api.setting.HoldsValue;
 import me.earth.pingbypass.api.setting.Setting;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 
 @Getter
-public class AntiCheat extends ModuleImpl {
+public class AntiCheat extends PhobotNameSpacedModule {
     private static final StrictDirection NCP_AND_GRIM = new Combined(Grim.INSTANCE, NCP.INSTANCE);
 
     private final Setting<Integer> actions = number("Actions", 8, 1, 100, "Block placement actions to perform per tick.");

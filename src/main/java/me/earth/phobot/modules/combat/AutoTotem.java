@@ -4,20 +4,19 @@ import me.earth.phobot.Phobot;
 import me.earth.phobot.modules.PhobotModule;
 import me.earth.phobot.services.SurroundService;
 import me.earth.phobot.services.inventory.InventoryContext;
+import me.earth.phobot.util.InventoryUtil;
 import me.earth.phobot.util.entity.EntityUtil;
+import me.earth.pingbypass.api.event.SafeListener;
+import me.earth.pingbypass.api.event.loop.GameloopEvent;
 import me.earth.pingbypass.api.input.Key;
 import me.earth.pingbypass.api.input.Keys;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.api.event.SafeListener;
-import me.earth.pingbypass.api.event.loop.GameloopEvent;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.SwordItem;
 
 public class AutoTotem extends PhobotModule {
     private final Setting<Offhand> mode = constant("Mode", Offhand.None, "What item you prefer in your offhand.");
@@ -47,10 +46,7 @@ public class AutoTotem extends PhobotModule {
                                 && getPingBypass()
                                 .getKeyBoardAndMouse()
                                 .isPressed(Key.Type.MOUSE, Keys.MOUSE_2)
-                                && context.getSelectedSlot()
-                                .getItem().is(
-                                        item -> item.value() instanceof SwordItem
-                                                || item.value() instanceof AxeItem);
+                                && InventoryUtil.isWeapon(context.getSelectedSlot().getItem());
                         if (eating) {
                             offhand(context, Items.ENCHANTED_GOLDEN_APPLE);
                             return;
@@ -65,18 +61,22 @@ public class AutoTotem extends PhobotModule {
             }
         });
     }
+
     private boolean isSafe(LocalPlayer player) {
         return surroundService.isSurrounded()
                 || invincibilityFrames.getValue() && !phobot.getInvincibilityFrameService().willDamageKill(player, phobot.getDamageService().getHighestDamage(), 400);
     }
+
     private void offhand(InventoryContext context, Item item) {
         if (!context.getOffhand().getItem().is(item)) {
             context.switchTo(item, InventoryContext.DEFAULT_SWAP_SWITCH);
         }
     }
+
     private enum Offhand {
         None,
         Totem,
         Crystal
     }
+
 }

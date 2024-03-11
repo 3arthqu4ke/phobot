@@ -11,6 +11,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Fallable;
@@ -37,10 +38,14 @@ public class Scaffold extends BlockPlacingModule {
     }
 
     @Override
-    public boolean placePos(BlockPos pos, Block block, LocalPlayer player, ClientLevel level) {
+    public boolean placePos(BlockPos pos, Block block, Player player, ClientLevel level) {
         boolean placed = super.placePos(pos, block, player, level);
         if (placed) {
-            if (mc.options.keyJump.isDown() && !mc.options.keyShift.isDown() && player.input.forwardImpulse == 0.0 && player.input.leftImpulse == 0.0) {
+            if (player instanceof LocalPlayer localPlayer
+                    && mc.options.keyJump.isDown()
+                    && !mc.options.keyShift.isDown()
+                    && localPlayer.input.forwardImpulse == 0.0
+                    && localPlayer.input.leftImpulse == 0.0) {
                 player.setDeltaMovement(player.getDeltaMovement().x, 0.42f + player.getJumpBoostPower(), player.getDeltaMovement().z);
                 if (towerTimer.passed(1500L)) {
                     player.setDeltaMovement(player.getDeltaMovement().x, -0.28, player.getDeltaMovement().z);

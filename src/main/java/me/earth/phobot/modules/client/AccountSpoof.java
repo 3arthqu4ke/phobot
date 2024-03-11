@@ -5,18 +5,18 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import me.earth.phobot.event.AuthenticationEvent;
 import me.earth.phobot.mixins.network.IServerboundHelloPacket;
+import me.earth.phobot.modules.PhobotNameSpacedModule;
 import me.earth.phobot.settings.UUIDSetting;
 import me.earth.pingbypass.PingBypass;
 import me.earth.pingbypass.api.command.CommandSource;
 import me.earth.pingbypass.api.command.impl.builder.ExtendedLiteralArgumentBuilder;
 import me.earth.pingbypass.api.command.impl.module.HasCustomModuleCommand;
+import me.earth.pingbypass.api.event.CancellingListener;
 import me.earth.pingbypass.api.event.impl.PingBypassInitializedEvent;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
-import me.earth.pingbypass.api.module.impl.Categories;
-import me.earth.pingbypass.api.module.impl.ModuleImpl;
-import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.api.event.CancellingListener;
 import me.earth.pingbypass.api.event.network.PacketEvent;
+import me.earth.pingbypass.api.module.impl.Categories;
+import me.earth.pingbypass.api.setting.Setting;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.network.chat.Component;
@@ -26,7 +26,7 @@ import org.apache.commons.lang3.mutable.MutableObject;
 import java.util.Random;
 import java.util.UUID;
 
-public class AccountSpoof extends ModuleImpl implements HasCustomModuleCommand {
+public class AccountSpoof extends PhobotNameSpacedModule implements HasCustomModuleCommand {
     private static final String LETTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_";
 
     private final Setting<String> name = string("Name", "Phobot", "The name to spoof");

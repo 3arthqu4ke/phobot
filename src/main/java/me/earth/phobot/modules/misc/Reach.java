@@ -1,20 +1,20 @@
 package me.earth.phobot.modules.misc;
 
 import lombok.Getter;
+import me.earth.phobot.modules.PhobotNameSpacedModule;
 import me.earth.phobot.util.math.MathUtil;
 import me.earth.pingbypass.PingBypass;
 import me.earth.pingbypass.api.event.event.CancellableEvent;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.gui.hud.DisplaysHudInfo;
 import me.earth.pingbypass.api.module.impl.Categories;
-import me.earth.pingbypass.api.module.impl.ModuleImpl;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-public class Reach extends ModuleImpl implements DisplaysHudInfo {
+public class Reach extends PhobotNameSpacedModule implements DisplaysHudInfo {
     public Reach(PingBypass pingBypass) {
         super(pingBypass, "Reach", Categories.RENDER, "Allows you to reach further.");
         listen(new Listener<Reach.Event>() {

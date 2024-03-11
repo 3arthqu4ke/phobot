@@ -6,8 +6,9 @@ import me.earth.phobot.event.PreKeybindHandleEvent;
 import me.earth.phobot.modules.PhobotModule;
 import me.earth.phobot.modules.combat.KillAura;
 import me.earth.phobot.services.inventory.InventoryContext;
-import me.earth.pingbypass.api.module.impl.Categories;
+import me.earth.phobot.util.InventoryUtil;
 import me.earth.pingbypass.api.event.SafeListener;
+import me.earth.pingbypass.api.module.impl.Categories;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
@@ -15,10 +16,8 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.SwordItem;
 
 @Slf4j
 public class AutoEat extends PhobotModule {
@@ -56,8 +55,7 @@ public class AutoEat extends PhobotModule {
                         int flags = InventoryContext.PREFER_MAINHAND | InventoryContext.SET_CARRIED_ITEM;
                         if (killAura.isEnabled()
                                 && !phobot.getInventoryService().isLockedIntoTotem()
-                                && (player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof SwordItem
-                                    || player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof AxeItem)) {
+                                && InventoryUtil.isHoldingWeapon(player)) {
                             flags = InventoryContext.DEFAULT_SWAP_SWITCH;
                         }
 
@@ -75,8 +73,8 @@ public class AutoEat extends PhobotModule {
     }
 
     private boolean isHoldingFood(LocalPlayer player) {
-        return player.getItemInHand(InteractionHand.OFF_HAND).getItem().getFoodProperties() != null
-                || player.getItemInHand(InteractionHand.MAIN_HAND).getItem().getFoodProperties() != null;
+        return player.getItemInHand(InteractionHand.OFF_HAND).getItem().isEdible()
+                || player.getItemInHand(InteractionHand.MAIN_HAND).getItem().isEdible();
     }
 
 }

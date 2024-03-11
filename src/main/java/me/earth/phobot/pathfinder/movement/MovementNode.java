@@ -36,7 +36,7 @@ public class MovementNode extends Abstract3dNode<MovementNode> {
 
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private final @Nullable MovementNode goal;
+    private @Nullable MovementNode goal;
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private @Nullable MovementNode previous;

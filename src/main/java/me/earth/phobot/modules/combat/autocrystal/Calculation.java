@@ -1,6 +1,7 @@
 package me.earth.phobot.modules.combat.autocrystal;
 
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
 import me.earth.phobot.damagecalc.CrystalPosition;
 import me.earth.phobot.damagecalc.DamageCalculator;
@@ -27,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Setter
 public class Calculation extends BreakCalculation implements Runnable {
     private final MutPos mutPos = new MutPos();
@@ -40,6 +42,7 @@ public class Calculation extends BreakCalculation implements Runnable {
     private final MutableObject<CrystalPosition> bestBlockedByCrystalObbyPos = new MutableObject<>();
 
     private boolean runBreakingCalculation = true;
+    private boolean rotationActionCalculation = false;
     private boolean hasBreakingCalculationRun = false;
     private boolean placed = false;
     private double maxY;
@@ -263,11 +266,15 @@ public class Calculation extends BreakCalculation implements Runnable {
     }
 
     private void place(CrystalPosition crystalPosition) {
-        CrystalPlacingAction action = module.placer().placeAction(player, level, crystalPosition);
+        CrystalPlacingAction action = module.placer().placeAction(player, level, crystalPosition, module.packetRotations().getValue().shouldUsePackets(module.surroundService()));
         if (action != null) {
             placed = true;
             if (!crystalPosition.isObsidian() && action.isFailedDueToRotations() && action.isExecuted() && !action.isSuccessful()) {
-                module.rotationAction(action);
+                if (rotationActionCalculation) {
+                    module.getBlockPlacer().addAction(action);
+                } else {
+                    module.rotationAction(action);
+                }
             }
         }
     }

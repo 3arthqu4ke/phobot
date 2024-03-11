@@ -12,7 +12,10 @@ public class CancellableFuture<T> extends CompletableFuture<T> {
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        cancellation.setCancelled(true);
+        if (!isDone()) {
+            cancellation.setCancelled(true);
+        }
+
         return super.cancel(mayInterruptIfRunning);
     }
 

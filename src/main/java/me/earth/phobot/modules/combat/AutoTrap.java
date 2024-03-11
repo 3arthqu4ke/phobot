@@ -64,10 +64,4 @@ public class AutoTrap extends BlockPlacingModule implements TrapsPlayers {
         };
     }
 
-    public enum PacketRotationMode {
-        None,
-        Always,
-        Surrounded
-    }
-
 }

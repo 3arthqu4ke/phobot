@@ -34,14 +34,14 @@ public class CrystalPlacer {
     private final Phobot phobot;
 
     public boolean place(LocalPlayer player, ClientLevel level, CrystalPosition pos) {
-        CrystalPlacingAction action = placeAction(player, level, pos);
+        CrystalPlacingAction action = placeAction(player, level, pos, false);
         return action != null && action.isSuccessful();
     }
 
     // TODO: use in Bomber!
-    public @Nullable CrystalPlacingAction placeAction(LocalPlayer player, ClientLevel level, CrystalPosition pos) {
+    public @Nullable CrystalPlacingAction placeAction(LocalPlayer player, ClientLevel level, CrystalPosition pos, boolean packetRotations) {
         CrystalPlacingAction[] result = new CrystalPlacingAction[1];
-        phobot.getInventoryService().use(context -> result[0] = placeAction(context, player, level, pos, false));
+        phobot.getInventoryService().use(context -> result[0] = placeAction(context, player, level, pos, packetRotations));
         return result[0];
     }
 

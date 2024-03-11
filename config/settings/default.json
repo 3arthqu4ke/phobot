@@ -1,14 +1,16 @@
 {
   "AccountSpoof": {
-    "Enabled": true
+    "Enabled": true,
+    "Random": false
   },
   "AntiCheat": {
     "Enabled": true,
     "Actions": 10,
     "MiningRange": 5.25,
-    "StrictDirection": "NCP",
-    "MiningStrictDirection": "NCP",
-    "CrystalStrictDirection": "NCP",
+    "Movement": "Grim",
+    "StrictDirection": "Combined",
+    "MiningStrictDirection": "Combined",
+    "CrystalStrictDirection": "Combined",
     "MiningRotations": true,
     "BlockRotations": true,
     "CrystalRotations": true,
@@ -17,10 +19,10 @@
     "InventoryDelay": 75,
     "Updates": 1,
     "LagBackThreshold": 3.0,
-    "CC": true,
+    "CC": false,
     "CloseInventory": false,
     "Opposite": true,
-    "Optimization": "None"
+    "Optimization": "CC"
   },
   "AutoConnect": {
     "Enabled": false,
@@ -33,12 +35,12 @@
   "AutoCrystal": {
     "Enabled": true,
     "MinDamage": 6.0,
-    "PlaceDelay": 0,
-    "BreakDelay": 0,
+    "PlaceDelay": 25,
+    "BreakDelay": 18,
     "MultiThreading": true,
     "ReplaceTime": 25,
-    "ReCalcTime": 0,
-    "MaxDeathTime": 50,
+    "ReCalcTime": 25,
+    "MaxDeathTime": 40,
     "Balance": 2.0,
     "MinFactor": 2.0,
     "Terrain": false,
@@ -76,7 +78,9 @@
   },
   "AutoTotem": {
     "Enabled": true,
-    "InvincibilityFrames": false
+    "Mode": "None",
+    "InvincibilityFrames": false,
+    "Sword-Gap": false
   },
   "AutoTrap": {
     "Enabled": false,
@@ -86,7 +90,7 @@
     "Helping": 5
   },
   "Blocker": {
-    "Enabled": false,
+    "Enabled": true,
     "Delay": 30,
     "NoGlitchBlocks": false,
     "Ticks": 3
@@ -95,7 +99,7 @@
     "Enabled": true,
     "Delay": 30,
     "NoGlitchBlocks": false,
-    "PacketRotations": false
+    "PacketRotations": true
   },
   "Criticals": {
     "Enabled": true,
@@ -106,20 +110,18 @@
     "Break": false,
     "Prediction": true,
     "ClosestCrystalDamage": false,
-    "F5Rotations": true
+    "F5Rotations": true,
+    "FixPosition": true
   },
   "FakePlayer": {
-    "Enabled": false
+    "Enabled": true
   },
   "FastFall": {
-    "Enabled": true,
+    "Enabled": false,
     "Speed": 3.0
   },
   "Fullbright": {
     "Enabled": true
-  },
-  "HitboxDesync": {
-    "Enabled": false
   },
   "HoleFiller": {
     "Enabled": false,
@@ -148,22 +150,21 @@
   "Logger": {
     "Enabled": false,
     "Incoming": true,
-    "Outgoing": false,
+    "Outgoing": true,
     "Info": false,
     "Chat": true,
     "StackTrace": false,
     "Buffer": false,
     "LineCap": 1000,
     "Total": true,
-    "Filter": "Off",
+    "Filter": "Include",
     "Packets": {
       "values": [
-        "ClientboundLevelChunkWithLightPacket",
-        "PosRot",
+        "ServerboundInteractPacket",
         "ClientboundPlayerPositionPacket"
       ],
       "action": "ADD",
-      "value": "PosRot"
+      "value": "ClientboundPlayerPositionPacket"
     }
   },
   "NoInterp": {
@@ -180,10 +181,11 @@
     "Bob": true,
     "Fov": true,
     "Explosions": true,
-    "Particles": false
+    "Particles": true
   },
   "NoSlowDown": {
-    "Enabled": true
+    "Enabled": true,
+    "Offhand": true
   },
   "Notifications": {
     "Enabled": true,
@@ -208,6 +210,12 @@
     "Render": false,
     "Debug": false
   },
+  "Phobot": {
+    "Enabled": false,
+    "BuildHeight": 57,
+    "Rotate": true,
+    "Duel": false
+  },
   "Potions": {
     "Enabled": true,
     "GoldenApples": true
@@ -219,14 +227,12 @@
     "Enabled": true,
     "MiddleClick": true,
     "Packets": 2,
-    "Auto": false
+    "Auto": true,
+    "Rotate": true
   },
   "Replenish": {
     "Enabled": true,
     "Threshold": 8
-  },
-  "Rotate": {
-    "Enabled": false
   },
   "Scaffold": {
     "Enabled": false,
@@ -239,7 +245,10 @@
     "Enabled": false,
     "Delay": 30,
     "NoGlitchBlocks": false,
-    "Helping": 3
+    "Helping": 3,
+    "Auto": true,
+    "Distance": 2.0,
+    "Prediction": 3
   },
   "Speed": {
     "Enabled": false
@@ -310,6 +319,7 @@
   },
   "Velocity": {
     "Enabled": true,
+    "Lag": true,
     "Blocks": true,
     "Entities": true
   },

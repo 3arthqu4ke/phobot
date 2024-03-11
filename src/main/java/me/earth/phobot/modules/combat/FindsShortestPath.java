@@ -7,6 +7,7 @@ import me.earth.pingbypass.api.setting.Setting;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.Nullable;
 
@@ -24,7 +25,7 @@ public interface FindsShortestPath extends ChecksBlockPlacingValidity {
 
     BlockPlacer getBlockPlacer();
 
-    default @Nullable Map.Entry<BlockPos, List<BlockPos>> findShortestPath(LocalPlayer player, ClientLevel level, List<BlockPos> positions, Block block) {
+    default @Nullable Map.Entry<BlockPos, List<BlockPos>> findShortestPath(Player player, ClientLevel level, List<BlockPos> positions, Block block) {
         List<BlockPos> shortest = null;
         BlockPos best = null;
         for (BlockPos pos : positions) {

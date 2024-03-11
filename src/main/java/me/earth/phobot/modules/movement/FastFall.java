@@ -1,12 +1,13 @@
 package me.earth.phobot.modules.movement;
 
+import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
 import me.earth.phobot.event.MoveEvent;
 import me.earth.phobot.modules.PhobotModule;
 import me.earth.phobot.util.player.MovementPlayer;
+import me.earth.pingbypass.api.event.SafeListener;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.api.event.SafeListener;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -18,6 +19,7 @@ import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
+@Slf4j
 public class FastFall extends PhobotModule {
     private final Setting<Double> speed = precise("Speed", 3.1, 0.1, 10.0, "The speed you are going to fall with.");
 
