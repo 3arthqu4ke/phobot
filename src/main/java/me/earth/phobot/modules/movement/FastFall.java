@@ -23,6 +23,7 @@ import net.minecraft.world.phys.Vec3;
 public class FastFall extends PhobotModule {
     private final Setting<Double> speed = precise("Speed", 3.1, 0.1, 10.0, "The speed you are going to fall with.");
 
+
     public FastFall(Phobot phobot, Speed speed) {
         super(phobot, "FastFall", Categories.MOVEMENT, "Makes you fall fast.");
         listen(new SafeListener<MoveEvent>(mc, -1000) {
@@ -31,17 +32,15 @@ public class FastFall extends PhobotModule {
                 if (!phobot.getPathfinder().isFollowingPath()
                         && !mc.options.keyJump.isDown()
                         && !mc.options.keyShift.isDown()
-                        && player.onGround()
-                        && canFastFall(player, event.getVec(), level, speed.isEnabled())) {
-                    event.setVec(getFastFallVec(event.getVec()));
+                        && canFastFall(player, event.getVec(), level, speed.isEnabled())) {;
+                        event.setVec(getFastFallVec(event.getVec()));
                 }
             }
         });
     }
 
     public Vec3 getFastFallVec(Vec3 delta) {
-        // cancel movement?
-        return new Vec3(delta.x(), Math.min(-speed.getValue(), delta.y), delta.y());
+            return new Vec3(delta.x() * 0.01, Math.min(-speed.getValue(), delta.y ), delta.z() * 0.01);
     }
 
     public boolean canFastFall(Player player, Vec3 delta, ClientLevel level, boolean speedIsOn) {
@@ -49,6 +48,7 @@ public class FastFall extends PhobotModule {
         // TODO: phobot.getLagbackService?
         return !speedIsOn
                 && !phobot.getMovementService().getMovement().shouldNotUseMovementHacks(player)
+                && player.onGround()
                 && player.fallDistance < 0.5
                 && player.getDeltaMovement().y < 0
                 && !isOnGroundAfterMove(player, delta, level)
@@ -81,5 +81,4 @@ public class FastFall extends PhobotModule {
 
         return -1;
     }
-
 }
