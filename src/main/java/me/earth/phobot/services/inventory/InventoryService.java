@@ -1,25 +1,28 @@
 package me.earth.phobot.services.inventory;
 
+import com.mojang.datafixers.types.Func;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.event.PostMotionPlayerUpdateEvent;
 import me.earth.phobot.event.PreMotionPlayerUpdateEvent;
 import me.earth.phobot.modules.client.anticheat.AntiCheat;
 import me.earth.phobot.util.NullabilityUtil;
-import me.earth.pingbypass.api.event.SubscriberImpl;
-import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.event.SafeListener;
 import me.earth.pingbypass.api.event.ShutdownEvent;
+import me.earth.pingbypass.api.event.SubscriberImpl;
+import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.event.loop.GameloopEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 @Slf4j
 @Getter
@@ -86,26 +89,37 @@ public class InventoryService extends SubscriberImpl {
     }
 
     public void use(Consumer<InventoryContext> action, boolean useNestedContext) {
+        supply(ctx -> {
+            action.accept(ctx);
+            return null;
+        }, useNestedContext, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T supply(Function<InventoryContext, T> action, boolean useNestedContext, T orElse) {
+        Object[] result = new Object[1];
         NullabilityUtil.safe(mc, (player, level, gameMode) -> {
             if (playerUpdateContext != null && mc.isSameThread()) {
                 if (useNestedContext) {
                     InventoryContext context = new InventoryContext(this, player, gameMode);
-                    action.accept(context);
+                    result[0] = action.apply(context);
                     context.end();
                 } else {
-                    action.accept(playerUpdateContext);
+                    result[0] = action.apply(playerUpdateContext);
                 }
             } else {
                 try {
                     lock.lock();
                     InventoryContext context = new InventoryContext(this, player, gameMode);
-                    action.accept(context);
+                    result[0] = action.apply(context);
                     context.end();
                 } finally {
                     lock.unlock();
                 }
             }
         });
+
+        return result[0] == null ? orElse : (T) result[0];
     }
 
     public void releasePlayerUpdateLock() {

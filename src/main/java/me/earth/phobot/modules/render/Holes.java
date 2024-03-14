@@ -2,15 +2,15 @@ package me.earth.phobot.modules.render;
 
 import lombok.Getter;
 import me.earth.phobot.invalidation.ConfigWithMinMaxHeight;
+import me.earth.phobot.modules.PhobotNameSpacedModule;
 import me.earth.pingbypass.PingBypass;
 import me.earth.pingbypass.api.module.impl.Categories;
-import me.earth.pingbypass.api.module.impl.ModuleImpl;
 import me.earth.pingbypass.api.setting.Setting;
 import net.minecraft.client.Minecraft;
 
 import java.util.concurrent.ExecutorService;
 
-public class Holes extends ModuleImpl implements ConfigWithMinMaxHeight {
+public class Holes extends PhobotNameSpacedModule implements ConfigWithMinMaxHeight {
     @Getter
     private final Setting<Boolean> calcAsync =
             bool("Async", true, "Calculates Chunks asynchronously.");

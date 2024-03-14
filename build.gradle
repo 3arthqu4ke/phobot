@@ -28,20 +28,20 @@ repositories {
 		url = "https://maven.wagyourtail.xyz/releases"
 	}
 
-	maven {
-		name = '3arthMaven'
-		url = 'https://3arthqu4ke.github.io/maven'
-	}
-
 	/*maven {
         name 'local'
         url project.rootDir.toURI().toURL().toString() + '/libs'
     }*/
 
-	/*maven {
+	maven {
 		name 'PingBypassSuperDirMaven'
 		url project.rootDir.parentFile.toURI().toURL().toString() + '/pingbypass/build/maven'
-	}*/
+	}
+
+	maven {
+		name = '3arthMaven'
+		url = 'https://3arthqu4ke.github.io/maven'
+	}
 
 	maven {
 		name = "ParchmentmcMaven"

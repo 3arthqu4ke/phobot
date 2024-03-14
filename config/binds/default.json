@@ -25,7 +25,13 @@
     ]
   },
   "AutoEat": {
-    "Bind": []
+    "Bind": [
+      {
+        "name": "P",
+        "type": "KEYBOARD",
+        "code": 80
+      }
+    ]
   },
   "AutoEchest": {
     "Bind": [
@@ -96,9 +102,6 @@
   "Fullbright": {
     "Bind": []
   },
-  "HitboxDesync": {
-    "Bind": []
-  },
   "HoleFiller": {
     "Bind": [
       {
@@ -138,6 +141,15 @@
   "Pathfinding": {
     "Bind": []
   },
+  "Phobot": {
+    "Bind": [
+      {
+        "name": "P",
+        "type": "KEYBOARD",
+        "code": 80
+      }
+    ]
+  },
   "Potions": {
     "Bind": []
   },
@@ -148,9 +160,6 @@
     "Bind": []
   },
   "Replenish": {
-    "Bind": []
-  },
-  "Rotate": {
     "Bind": []
   },
   "Scaffold": {

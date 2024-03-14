@@ -56,7 +56,7 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
             value = "INVOKE",
             target = "Lnet/minecraft/client/player/AbstractClientPlayer;move(Lnet/minecraft/world/entity/MoverType;Lnet/minecraft/world/phys/Vec3;)V"),
         index = 1)
-    private Vec3 travelHook(Vec3 moveVec) {
+    private Vec3 moveHook(Vec3 moveVec) {
         MoveEvent event = new MoveEvent(moveVec);
         PingBypassApi.getEventBus().post(event);
         return event.getVec();

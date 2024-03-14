@@ -26,8 +26,11 @@ import java.util.function.Function;
 
 @Setter
 @Getter
-@SuppressWarnings("resource") // this.level()
 public class MovementPlayer extends FakePlayer {
+    /**
+     * {@link net.minecraft.client.player.LocalPlayer}
+     */
+    private static final double MINOR_COLLISION_ANGLE_THRESHOLD_RADIAN = 0.13962634F;
     private Function<Vec3, Vec3> moveCallback = Function.identity();
     private Movement movement = NoStepMovement.INSTANCE;
 
@@ -53,9 +56,11 @@ public class MovementPlayer extends FakePlayer {
     public void copyPosition(Entity entity) {
         super.copyPosition(entity);
         this.setOnGround(entity.onGround());
+        this.fallDistance = entity.fallDistance;
         this.verticalCollision = entity.verticalCollision;
         this.verticalCollisionBelow = entity.verticalCollisionBelow;
         this.horizontalCollision = entity.horizontalCollision;
+        this.minorHorizontalCollision = entity.minorHorizontalCollision;
     }
 
     @Override
@@ -67,9 +72,10 @@ public class MovementPlayer extends FakePlayer {
             this.setDeltaMovement(Vec3.ZERO);
         }
 
-        Vec3 collideVec;
-        double collideDistance;
-        if ((collideDistance = (collideVec = this.collide(motion = this.maybeBackOffFromEdge(motion, moverType))).lengthSqr()) > Shapes.EPSILON) {
+        motion = this.maybeBackOffFromEdge(motion, moverType);
+        Vec3 collideVec = this.collide(motion);
+        double collideDistance = collideVec.lengthSqr();
+        if (collideDistance > Shapes.EPSILON) {
             if (this.fallDistance != 0.0f
                     && collideDistance >= 1.0
                     && this.level()
@@ -113,13 +119,46 @@ public class MovementPlayer extends FakePlayer {
         return super.maybeBackOffFromEdge(vec3, moverType);
     }
 
-    // TODO: swimming, elytra flying, basically LivingEntity.travel(Vec3)
+    /**
+     * net.minecraft.client.player.LocalPlayer#isHorizontalCollisionMinor(Vec3)
+     *
+     * @see net.minecraft.client.player.LocalPlayer
+     * @param deltaMovement the deltaMovement
+     * @return whether the collision is minor
+     */
+    @Override
+    protected boolean isHorizontalCollisionMinor(Vec3 deltaMovement) {
+        float yRot = this.getYRot() * (float) (Math.PI / 180.0);
+        double sinYRot = Mth.sin(yRot);
+        double cosYRot = Mth.cos(yRot);
+        double x = (double) this.xxa * cosYRot - (double) this.zza * sinYRot;
+        double z = (double) this.zza * cosYRot + (double) this.xxa * sinYRot;
+        double distanceSq = Mth.square(x) + Mth.square(z);
+        double distanceSqSpeed = Mth.square(deltaMovement.x) + Mth.square(deltaMovement.z);
+        if (!(distanceSq < Mth.EPSILON) && !(distanceSqSpeed < Mth.EPSILON)) {
+            double delta = x * deltaMovement.x + z * deltaMovement.z;
+            double collisionAngle = Math.acos(delta / Math.sqrt(distanceSq * distanceSqSpeed));
+            return collisionAngle < MINOR_COLLISION_ANGLE_THRESHOLD_RADIAN;
+        } else {
+            return false;
+        }
+    }
+
     /**
      * @see net.minecraft.world.entity.LivingEntity#travel(Vec3)
      */
-    @SuppressWarnings("deprecation")
     public void travel() {
-        Vec3 delta = this.getDeltaMovement();
+        travel(getDeltaMovement());
+    }
+
+    // TODO: swimming, elytra flying, basically LivingEntity.travel(Vec3)
+    /**
+     * @param delta the delta movement to move with.
+     * @see net.minecraft.world.entity.LivingEntity#travel(Vec3)
+     */
+    @Override
+    @SuppressWarnings("deprecation")
+    public void travel(Vec3 delta) {
         double gravity = movement.getGravity(); // 0.08;
         boolean falling = this.getDeltaMovement().y <= 0.0;
         if (falling && this.hasEffect(MobEffects.SLOW_FALLING)) {
@@ -129,6 +168,7 @@ public class MovementPlayer extends FakePlayer {
         BlockPos pos = this.getBlockPosBelowThatAffectsMyMovement();
         float friction = this.level().getBlockState(pos).getBlock().getFriction();
         float nextFriction = this.onGround() ? friction * 0.91f : 0.91f;
+        // move happens here
         Vec3 afterMove = this.handleRelativeFrictionAndCalculateMovement(delta, friction);
         double frictionY = afterMove.y;
         MobEffectInstance levitation = this.getEffect(MobEffects.LEVITATION);

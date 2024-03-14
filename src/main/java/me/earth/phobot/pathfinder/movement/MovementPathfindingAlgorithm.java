@@ -11,8 +11,8 @@ import me.earth.phobot.movement.Movement;
 import me.earth.phobot.pathfinder.Path;
 import me.earth.phobot.pathfinder.Pathfinder;
 import me.earth.phobot.pathfinder.algorithm.Algorithm;
-import me.earth.phobot.pathfinder.render.RenderableAlgorithm;
 import me.earth.phobot.pathfinder.mesh.MeshNode;
+import me.earth.phobot.pathfinder.render.RenderableAlgorithm;
 import me.earth.phobot.pathfinder.util.CancellableTask;
 import me.earth.phobot.pathfinder.util.Cancellation;
 import me.earth.phobot.util.math.PositionUtil;
@@ -67,7 +67,10 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
      * number of such updates and then updates the targetNodeIndex accordingly, so we target further MeshNodes.
      */
     private int noMoveUpdates;
-    private boolean walkOnly;
+    /**
+     * If {@code null}, we can BHop, if not {@code null} we should walk for this distance.
+     */
+    private @Nullable Double walkOnly; // TODO: rework this!
 
     /**
      * Constructs a new MovementPathfindingAlgorithm.
@@ -81,7 +84,7 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
      */
     public MovementPathfindingAlgorithm(Phobot phobot, ClientLevel level, Path<MeshNode> path, @Nullable Player player, @Nullable MovementNode start, @Nullable MovementNode goal) {
         this(phobot, level, path, new MovementPlayer(level), phobot.getPingBypass().getModuleManager().getByClass(FastFall.class).orElseGet(() -> new FastFall(phobot, null)),
-             player == null ? Collections.emptyList() : new ArrayList<>(player.getActiveEffects()), start, goal, null, null, 0, false);
+             player == null ? Collections.emptyList() : new ArrayList<>(player.getActiveEffects()), start, goal, null, null, 0, null);
         init();
     }
 
@@ -153,7 +156,7 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
         assert currentMove != null;
         currentMove.apply(player);
         // we prefer walking towards the goal if we are close to it
-        boolean preferWalking = walkOnly || currentMove.distanceSq(goal) < 6.25/* 2.5 ^ 2 */;
+        boolean preferWalking = walkOnly != null || currentMove.distanceSq(goal) < 6.25/* 2.5 ^ 2 */;
         if (!preferWalking && bunnyHopTowardsTarget()) { // attempt to bunny hop towards the target
             return true;
         }
@@ -189,7 +192,7 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
                 return true;
             }
 
-            if (preferWalking && !walkOnly) { // we have not yet tried to bunny hop towards the target, make last effort
+            if (preferWalking /*&& walkOnly == null*/) { // we have not yet tried to bunny hop towards the target, make last effort
                 currentMove.apply(player);
                 if (bunnyHopTowardsTarget()) {
                     return true;

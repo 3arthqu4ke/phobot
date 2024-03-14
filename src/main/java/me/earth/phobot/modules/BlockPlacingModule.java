@@ -12,6 +12,7 @@ import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -19,6 +20,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * Base class for modules that place blocks.
@@ -59,11 +61,20 @@ public abstract class BlockPlacingModule extends PhobotModule implements ChecksB
         return true;
     }
 
-    public boolean placePos(BlockPos pos, Block block, LocalPlayer player, ClientLevel level) {
+    public boolean placePos(BlockPos pos, Block block, Player player, ClientLevel level) {
         return placeAction(pos, block, player, level) != null;
     }
 
-    public @Nullable BlockPlacer.Action placeAction(BlockPos pos, Block block, LocalPlayer player, ClientLevel level) {
+    public @Nullable BlockPlacer.Action placeAction(BlockPos pos, Block block, Player player, ClientLevel level) {
+        BlockPlacer.Action action = createPlaceAction(pos, block, player, level, this);
+        if (action != null) {
+            addAction(blockPlacer, action);
+        }
+
+        return action;
+    }
+
+    public @Nullable BlockPlacer.Action createPlaceAction(BlockPos pos, Block block, Player player, ClientLevel level, ChecksBlockPlacingValidity blockPlacingValidity) {
         for (BlockPlacer.Action action : blockPlacer.getActions()) {
             if (action.getPos().equals(pos)) {
                 return null;
@@ -90,14 +101,13 @@ public abstract class BlockPlacingModule extends PhobotModule implements ChecksB
         // TODO: use this!!! block.getStateForPlacement(blockPlaceContext) though for the simple blocks on cc this should be fine for now
         BlockState futureState = block.defaultBlockState();
         VoxelShape shape = futureState.getCollisionShape(level, pos, blockPlacer.getCollisionContext());
-        if (!shape.isEmpty() && isBlockedByEntity(pos, shape, player, level, entity -> false)) {
+        if (!shape.isEmpty() && blockPlacingValidity.isBlockedByEntity(pos, shape, player, level, entity -> false)) {
             return null;
         }
 
         BlockPlacer.Action action = new BlockPlacer.Action(this, placeOn.immutable(), pos.immutable(), direction.getOpposite(), block.asItem(),
                 !noGlitchBlocks.getValue(), isUsingSetCarriedItem(), isUsingPacketRotations(), getBlockPlacer(), requiresExactDirection());
         action.getDependencies().addAll(dependencies);
-        addAction(blockPlacer, action);
         return action;
     }
 

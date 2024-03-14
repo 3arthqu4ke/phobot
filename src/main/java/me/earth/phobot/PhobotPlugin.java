@@ -50,6 +50,7 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
         super.unload();
         if (Objects.equals(PhobotApi.getPhobot(), phobot)) {
             if (phobot != null) {
+                phobot.getPathfinder().cancel();
                 phobot.getInventoryService().releasePlayerUpdateLock();
             }
 
@@ -82,7 +83,7 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
         LagbackService lagbackService = subscribe(unloadingService, new LagbackService());
 
         TaskService taskService = subscribe(unloadingService, new TaskService(pingBypass.getMinecraft()));
-        Pathfinder pathfinder = subscribe(unloadingService, new Pathfinder(pingBypass, navigationMeshManager, executor, taskService));
+        Pathfinder pathfinder = subscribe(unloadingService, new Pathfinder(pingBypass, unloadingService.getEventBus(), navigationMeshManager, executor, taskService));
 
         ServerService serverService = subscribe(unloadingService, new ServerService());
         AntiCheat antiCheat = new AntiCheat(pingBypass, serverService);
@@ -99,7 +100,7 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
         subscribe(unloadingService, new PlayerPredictionService(antiCheat, pingBypass.getMinecraft(), movementService));
         BlockDestructionService blockDestructionService = subscribe(unloadingService, new BlockDestructionService(pingBypass.getMinecraft()));
         ThreadSafeLevelService threadSafeLevelService = subscribe(unloadingService, new ThreadSafeLevelService(pingBypass.getMinecraft()));
-        return new Phobot(pingBypass, executor, navigationMeshManager, pathfinder, pingBypass.getMinecraft(),
+        return new Phobot(pingBypass, unloadingService.getEventBus(), executor, navigationMeshManager, pathfinder, pingBypass.getMinecraft(),
                 holeManager, lagbackService, localPlayerPositionService, attackService,
                 invincibilityFrameService, damageService, blockPlacer, antiCheat, motionUpdateService,
                 blockUpdateService, blockDestructionService, serverService, totemPopService, inventoryService, threadSafeLevelService,
@@ -131,7 +132,7 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
         unloadingService.registerModule(new Scaffold(phobot));
         unloadingService.registerModule(new Stop(pingBypass));
         unloadingService.registerModule(new XCarry(phobot));
-        unloadingService.registerModule(new FakePlayerModule(pingBypass));
+        unloadingService.registerModule(new FakePlayerModule(phobot));
         unloadingService.registerModule(new Criticals(pingBypass));
         unloadingService.registerModule(new Swing(pingBypass));
         unloadingService.registerModule(new AutoConnect(phobot));

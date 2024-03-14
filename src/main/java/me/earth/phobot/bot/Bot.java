@@ -52,6 +52,12 @@ public class Bot extends PhobotModule {
         registerBehaviour(new Repairing(this));
     }
 
+    @Override
+    protected void onDisable() {
+        getModules().getAutoEchest().disable();
+        getModules().getScaffold().disable();
+    }
+
     // TODO: duel detection?, theres quite some issues with that
     public boolean isDueling() {
         return duel.getValue();

@@ -4,9 +4,9 @@ import me.earth.phobot.Phobot;
 import me.earth.phobot.mixins.IMinecraft;
 import me.earth.phobot.modules.PhobotModule;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
+import me.earth.pingbypass.api.event.loop.GameloopEvent;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
-import me.earth.pingbypass.api.event.loop.GameloopEvent;
 
 public class Timer extends PhobotModule {
     public Timer(Phobot pingBypass) {

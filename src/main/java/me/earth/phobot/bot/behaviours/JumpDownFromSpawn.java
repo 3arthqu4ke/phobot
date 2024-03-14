@@ -4,27 +4,32 @@ import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.bot.Bot;
 import me.earth.phobot.holes.Hole;
 import me.earth.phobot.pathfinder.mesh.MeshNode;
+import me.earth.phobot.pathfinder.util.MultiPathSearch;
+import me.earth.phobot.util.ResetUtil;
 import me.earth.phobot.util.math.MathUtil;
 import me.earth.phobot.util.time.StopWatch;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.network.chat.Component;
 
+import java.util.AbstractMap;
 import java.util.Comparator;
-import java.util.concurrent.CompletableFuture;
+import java.util.Objects;
 
 /**
  * Detects if we are up at spawn and then jumps down.
  */
 @Slf4j
 public class JumpDownFromSpawn extends Behaviour {
+    private static final String CHAT_ID = "JumpDownFromSpawn";
     private final StopWatch.ForSingleThread screenTimer = new StopWatch.ForSingleThread();
-    private volatile CompletableFuture<?> future;
+    private volatile MultiPathSearch<Hole> search;
 
     public JumpDownFromSpawn(Bot bot) {
         super(bot, PRIORITY_JUMP_DOWN);
+        ResetUtil.onRespawnOrWorldChange(this, mc, screenTimer::reset);
     }
 
     public boolean isAboveSpawn(LocalPlayer player) {
@@ -33,7 +38,8 @@ public class JumpDownFromSpawn extends Behaviour {
 
     @Override
     protected void update(LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
-        if (phobot.getPathfinder().isFollowingPath() || future != null || bot.isDueling() || !screenTimer.passed(2_000L)) {
+        // TODO: make sure the NavigationMesh has been setup enough until now!
+        if (phobot.getPathfinder().isFollowingPath() || search != null || bot.isDueling()) {
             return;
         }
 
@@ -43,29 +49,49 @@ public class JumpDownFromSpawn extends Behaviour {
         }
 
         if (player.getY() >= bot.getSpawnHeight().getValue()) {
-            Hole hole = phobot.getHoleManager().getMap().values().stream()
-                    .filter(h -> h.getY() < bot.getSpawnHeight().getValue())
-                    .min(Comparator.comparingDouble(h -> MathUtil.distance2dSq(h.getX(), h.getZ(), player.getX(), player.getZ())))
-                    .orElse(null);
-            if (hole == null) {
-                log.warn("Failed to find hole from spawn!");
+            if (!screenTimer.passed(3_000L)) {
+                double time = MathUtil.round((3_000L - screenTimer.getPassedTime()) / 1000.0, 1);
+                pingBypass.getChat().send(Component.literal("Phobot dropping in " + time + "s..."), CHAT_ID);
+                return;
             } else {
-                BlockPos pos = hole.getAirParts().stream()
-                                   .min(Comparator.comparingDouble(p -> MathUtil.distance2dSq(p.getX(), p.getZ(), player.getX(), player.getZ())))
-                                   .orElseThrow();
-                MeshNode goal = phobot.getNavigationMeshManager().getMap().get(pos);
-                if (goal == null) {
-                    log.warn("Failed to find MeshNode for pos " + pos);
-                } else {
-                    var future = phobot.getPathfinder().findPath(player, goal, true);
-                    this.future = future;
-                    future.whenComplete((r,t) -> mc.submit(() -> this.future = null));
-                    future.thenAccept(result -> {
-                        Vec3 goalPos = hole.getCenter();
-                        phobot.getPathfinder().follow(phobot, result, goalPos);
-                    });
-                }
+                pingBypass.getChat().send(Component.literal("Dropping..."), CHAT_ID);
             }
+
+            var pathSearch = new MultiPathSearch<Hole>();
+            phobot.getHoleManager().getMap().values().stream()
+                    .filter(h -> h.getY() < bot.getSpawnHeight().getValue())
+                    .sorted(Comparator.comparingDouble(h -> MathUtil.distance2dSq(h.getX(), h.getZ(), player.getX(), player.getZ())))
+                    .map(hole -> {
+                        BlockPos pos = hole.getAirParts()
+                                .stream()
+                                .min(Comparator.comparingDouble(p -> MathUtil.distance2dSq(p.getX(), p.getZ(), player.getX(), player.getZ())))
+                                .orElse(null);
+                        if (pos != null) {
+                            MeshNode meshNode = phobot.getNavigationMeshManager().getMap().get(pos);
+                            return meshNode == null ? null : new AbstractMap.SimpleEntry<>(hole, meshNode);
+                        }
+
+                        return null;
+                    }).filter(Objects::nonNull)
+                    .limit(10)
+                    .forEach(goal -> pathSearch.findPath(goal.getKey(), phobot.getPathfinder(), player, goal.getValue(), true));
+
+            pathSearch.allFuturesAdded();
+            this.search = pathSearch;
+            pathSearch.getFuture().whenComplete((result,t) -> {
+                if (result != null) {
+                    phobot.getPathfinder().follow(phobot, result.algorithmResult(), result.key().getCenter());
+                }
+
+                mc.submit(() -> {
+                    pingBypass.getChat().delete(CHAT_ID);
+                    if (this.search == pathSearch) {
+                        this.search = null;
+                    }
+                });
+            });
+        } else {
+            pingBypass.getChat().delete(CHAT_ID);
         }
     }
 

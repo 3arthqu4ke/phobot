@@ -6,6 +6,7 @@ import me.earth.phobot.event.PreKeybindHandleEvent;
 import me.earth.phobot.mixins.entity.IPlayer;
 import me.earth.phobot.pathfinder.mesh.MeshNode;
 import me.earth.phobot.services.inventory.InventoryContext;
+import me.earth.phobot.util.InventoryUtil;
 import me.earth.pingbypass.api.event.SafeListener;
 import me.earth.pingbypass.api.event.network.PacketEvent;
 import me.earth.pingbypass.api.event.network.ReceiveListener;
@@ -16,11 +17,8 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.SwordItem;
 
 import java.util.HashSet;
 import java.util.Optional;
@@ -54,8 +52,7 @@ public class Escape extends Behaviour {
                             int flags = InventoryContext.PREFER_MAINHAND | InventoryContext.SET_CARRIED_ITEM;
                             if (bot.getModules().getKillAura().isEnabled()
                                     && !phobot.getInventoryService().isLockedIntoTotem()
-                                    && (player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof SwordItem
-                                    || player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof AxeItem)) {
+                                    && !InventoryUtil.isHoldingWeapon(player)) {
                                 flags = InventoryContext.DEFAULT_SWAP_SWITCH;
                             }
 

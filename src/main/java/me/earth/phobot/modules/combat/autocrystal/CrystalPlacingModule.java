@@ -11,6 +11,7 @@ import me.earth.phobot.ducks.IEntity;
 import me.earth.phobot.event.PreMotionPlayerUpdateEvent;
 import me.earth.phobot.event.RenderEvent;
 import me.earth.phobot.modules.BlockPlacingModule;
+import me.earth.phobot.modules.combat.PacketRotationMode;
 import me.earth.phobot.services.BlockPlacer;
 import me.earth.phobot.services.SurroundService;
 import me.earth.phobot.services.inventory.InventoryContext;
@@ -21,26 +22,26 @@ import me.earth.phobot.util.math.RotationUtil;
 import me.earth.phobot.util.render.Renderer;
 import me.earth.phobot.util.time.StopWatch;
 import me.earth.phobot.util.time.TimeUtil;
+import me.earth.pingbypass.api.event.SafeListener;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
+import me.earth.pingbypass.api.event.loop.GameloopEvent;
+import me.earth.pingbypass.api.event.network.PacketEvent;
+import me.earth.pingbypass.api.event.network.PrePostSubscriber;
 import me.earth.pingbypass.api.gui.hud.DisplaysHudInfo;
 import me.earth.pingbypass.api.input.Bind;
 import me.earth.pingbypass.api.setting.Setting;
 import me.earth.pingbypass.api.traits.Nameable;
-import me.earth.pingbypass.api.event.SafeListener;
-import me.earth.pingbypass.api.event.loop.GameloopEvent;
-import me.earth.pingbypass.api.event.network.PacketEvent;
-import me.earth.pingbypass.api.event.network.PrePostSubscriber;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.AABB;
 import org.apache.commons.lang3.mutable.MutableObject;
 
 import java.util.Map;
@@ -67,7 +68,6 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
     private final Setting<Float> minDamageFactor = floating("MinFactor", 2.0f, 0.1f, 10.0f, "Minimum Factor between self damage and damage we are dealing.");
     private final Setting<Boolean> terrain = bool("Terrain", false, "Will take into account terrain we blow up.");
     private final Setting<Integer> obsidian = number("Obsidian", 1, 0, 10, "Maximum amount of obsidian blocks to place.");
-    private final Setting<Boolean> replaceWhenNotFound = bool("ReplaceWhenFailedPlace", false, "Will rerun a calculation when our crystal has not spawned yet.");
     private final Setting<Double> minObbyDamage = precise("MinObsidianDamage", 10.0, 0.1, 36.0, "Minimum damage to deal to a player when placing an obsidian block for the crystal.");
     private final Setting<Double> faceplace = precise("Faceplace", 10.0, 0.1, 36.0, "Health at which we start to faceplace.");
     private final Setting<Double> armor = precise("Armor", 7.5, 0.1, 100.0, "Armor percentage at which we start to faceplace.");
@@ -76,6 +76,8 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
     private final Setting<Boolean> fastWhenUnsafe = bool("FastWhenUnsafe", false, "Will speed up faceplacing while you are outside holes.");
     private final Setting<Integer> placePrediction = number("PlacePrediction", 0, 0, 6, "Ticks to predict enemy player movement for when calculating damage for placements.");
     private final Setting<Integer> breakPrediction = number("BreakPrediction", 0, 0, 6, "Ticks to predict enemy player movement for when calculating damage for breaking crystals.");
+    private final Setting<PacketRotationMode> packetRotations = constant("PacketRotations", PacketRotationMode.None, "Send packets to rotate.");
+    private final Setting<Boolean> gameLoop = bool("GameLoop", true, "Runs on game loop.");
 
     private final CalculationService calculationService = new CalculationService(this);
     private final PositionPool<CrystalPosition> positionPool = new PositionPool<>(7, CrystalPosition::new, new CrystalPosition[0]);
@@ -123,7 +125,9 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
         listen(new SafeListener<GameloopEvent>(mc) {
             @Override
             public void onEvent(GameloopEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
-                calculationService.calculate(level, player, placeTimer.passed(100L) && breakTimer.passed(100L) ? 50 : 100, multiThreading.getValue());
+                if (gameLoop.getValue()) {
+                    calculationService.calculate(level, player, placeTimer.passed(100L) && breakTimer.passed(100L) ? 50 : 100, multiThreading.getValue());
+                }
             }
         });
 
@@ -143,7 +147,9 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
                 EndCrystal endCrystal = new EndCrystal(level, x, y, z);
                 endCrystal.setId(event.getPacket().getId());
                 if (endCrystal.getBoundingBox().distanceToSqr(player.getEyePosition()) >= ServerGamePacketListenerImpl.MAX_INTERACTION_DISTANCE
-                    || phobot.getAntiCheat().getAttackRotations().getValue() && !RaytraceUtil.areRotationsLegit(phobot, endCrystal)) {
+                    || phobot.getAntiCheat().getAttackRotations().getValue()
+                        && !packetRotations.getValue().shouldUsePackets(surroundService)
+                        && !RaytraceUtil.areRotationsLegit(phobot, endCrystal)) {
                     return;
                 }
 
@@ -205,6 +211,7 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
             obbyPos(null);
             rotationAction(null);
             Calculation calculation = createCalculation(level, player);
+            calculation.setRotationActionCalculation(true);
             calculation.calculatePlacements(false, rotation.getCrystalPosition());
             obbyPos(null); // clear again to prevent loop
             rotationAction(null);
@@ -216,6 +223,7 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
             obbyPos(null);
             rotationAction(null);
             Calculation calculation = createCalculation(level, player);
+            // addAction is done by the CrystalPlacer
             calculation.preparePlaceCalculation();
             calculation.calculateObsidian(obbyPos);
             obbyPos(null); // clear again to prevent loop
@@ -267,6 +275,14 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
         try {
             var breakCalculation = new BreakCalculation(this, mc, phobot, player, level, phobot.getAntiCheat().getDamageCalculator());
             if (breakCalculation.calculateSingleCrystal(endCrystal, new MutableObject<>(0.0f), new MutableObject<>(false)) && breakTimer.passed(breakDelay.getValue())) {
+                if (phobot.getAntiCheat().getAttackRotations().getValue()
+                        && !RaytraceUtil.areRotationsLegit(phobot, endCrystal)
+                        && packetRotations.getValue().shouldUsePackets(surroundService)) {
+                    Player rotationPlayer = phobot.getLocalPlayerPositionService().getPlayerOnLastPosition(player);
+                    float[] rotations = RotationUtil.getRotations(rotationPlayer, endCrystal);
+                    player.connection.send(new ServerboundMovePlayerPacket.Rot(rotations[0], rotations[1], rotationPlayer.onGround()));
+                }
+
                 phobot.getAttackService().attack(player, endCrystal);
                 breakTimer.reset();
                 long attackTime = TimeUtil.getMillis();
@@ -286,8 +302,7 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
                             if (reCalcTime.getValue() != 0) {
                                 phobot.getTaskService().addTaskToBeExecutedIn(reCalcTime.getValue(), CrystalPlacingModule.this, () -> {
                                     Entity stillLivingCrystal = level.getEntity(endCrystal.getId());
-                                    if (stillLivingCrystal != null && !stillLivingCrystal.isRemoved()
-                                            || (replaceWhenNotFound.getValue() && level.getEntities(EntityType.END_CRYSTAL, new AABB(lastCrystalPos), ec -> lastCrystalPos.equals(ec.blockPosition())).isEmpty())) {
+                                    if (stillLivingCrystal != null && !stillLivingCrystal.isRemoved()) {
                                         calculationService.calculate(level, player, 0, multiThreading.getValue());
                                     }
                                 });

@@ -9,6 +9,7 @@ import me.earth.phobot.pathfinder.mesh.NavigationMeshManager;
 import me.earth.phobot.services.*;
 import me.earth.phobot.services.inventory.InventoryService;
 import me.earth.pingbypass.PingBypass;
+import me.earth.pingbypass.api.event.api.EventBus;
 import net.minecraft.client.Minecraft;
 
 import java.util.concurrent.ExecutorService;
@@ -20,6 +21,7 @@ public class Phobot {
     public static final String NAME = "Phobot";
 
     private final PingBypass pingBypass;
+    private final EventBus unloadingEventBus;
     private final ExecutorService executorService;
     private final NavigationMeshManager navigationMeshManager;
     private final Pathfinder pathfinder;

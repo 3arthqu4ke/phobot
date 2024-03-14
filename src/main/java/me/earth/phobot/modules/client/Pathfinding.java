@@ -2,16 +2,16 @@ package me.earth.phobot.modules.client;
 
 import lombok.Getter;
 import me.earth.phobot.invalidation.ConfigWithMinMaxHeight;
+import me.earth.phobot.modules.PhobotNameSpacedModule;
 import me.earth.pingbypass.PingBypass;
 import me.earth.pingbypass.api.module.impl.Categories;
-import me.earth.pingbypass.api.module.impl.ModuleImpl;
 import me.earth.pingbypass.api.setting.Setting;
 import me.earth.pingbypass.api.setting.impl.types.BoolBuilder;
 import net.minecraft.client.Minecraft;
 
 import java.util.concurrent.ExecutorService;
 
-public class Pathfinding extends ModuleImpl implements ConfigWithMinMaxHeight {
+public class Pathfinding extends PhobotNameSpacedModule implements ConfigWithMinMaxHeight {
     public static final Setting<Boolean> DEBUG = new BoolBuilder().withName("Debug").withDescription("Debugs").withValue(false).build();
 
     @Getter

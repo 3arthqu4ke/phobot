@@ -3,7 +3,6 @@ package me.earth.phobot.bot.behaviours;
 import lombok.Getter;
 import me.earth.phobot.bot.Bot;
 import me.earth.phobot.holes.Hole;
-import me.earth.phobot.pathfinder.algorithm.Algorithm;
 import me.earth.phobot.pathfinder.mesh.MeshNode;
 import me.earth.phobot.pathfinder.util.MultiPathSearch;
 import me.earth.phobot.util.ResetUtil;
@@ -21,7 +20,7 @@ import java.util.Set;
 @Getter
 public class RunningAway extends Behaviour {
     private final Set<Object> runningAwayRequests = new HashSet<>();
-    private MultiPathSearch multiPathSearch;
+    private MultiPathSearch<Hole> multiPathSearch;
 
     public RunningAway(Bot bot) {
         super(bot, PRIORITY_RUN_AWAY);
@@ -35,7 +34,7 @@ public class RunningAway extends Behaviour {
             return;
         }
         // TODO: trap enemy if we leave the same hole?
-        var multiPathSearch = new MultiPathSearch();
+        var multiPathSearch = new MultiPathSearch<Hole>();
         this.multiPathSearch = multiPathSearch;
         gotoHoles(multiPathSearch, player, 64.0);
         if (multiPathSearch.getFutures().isEmpty()) {
@@ -47,21 +46,12 @@ public class RunningAway extends Behaviour {
             this.multiPathSearch = null;
         }
 
-        multiPathSearch.getFuture().thenAccept(path -> {
-            path.order(Algorithm.Result.Order.GOAL_TO_START);
-            if (path.getPath().isEmpty()) {
-                return;
-            }
-
-            MeshNode goal = path.getPath().get(0);
-            // TODO: this is ugly!!! theres gotta be a better way!!!!
-            Hole hole = phobot.getHoleManager().getMap().get(new BlockPos(goal.getX(), goal.getY(), goal.getZ()));
-            if (hole != null) {
-                mc.submit(() -> {
-                    Vec3 goalPos = hole.getCenter();
-                    phobot.getPathfinder().follow(phobot, path, goalPos);
-                });
-            }
+        multiPathSearch.getFuture().thenAccept(result -> {
+            Hole hole = result.key();
+            mc.submit(() -> {
+                Vec3 goalPos = hole.getCenter();
+                phobot.getPathfinder().follow(phobot, result.algorithmResult(), goalPos);
+            });
         });
 
         multiPathSearch.getFuture().whenComplete((r,t) -> mc.submit(() -> {
@@ -71,7 +61,7 @@ public class RunningAway extends Behaviour {
         }));
     }
 
-    private void gotoHoles(MultiPathSearch multiPathSearch, LocalPlayer player, double distanceSq) {
+    private void gotoHoles(MultiPathSearch<Hole> multiPathSearch, LocalPlayer player, double distanceSq) {
         Set<Hole> holes = new HashSet<>();
         for (Hole hole : phobot.getHoleManager().getMap().values()) {
             if (!holes.contains(hole) && hole.getDistanceSqr(player) <= distanceSq) {
@@ -82,7 +72,7 @@ public class RunningAway extends Behaviour {
 
                 MeshNode goal = phobot.getNavigationMeshManager().getMap().get(pos);
                 if (goal != null) {
-                    multiPathSearch.findPath(phobot.getPathfinder(), player, goal, true);
+                    multiPathSearch.findPath(hole, phobot.getPathfinder(), player, goal, true);
                     if (multiPathSearch.getFutures().size() >= 10) {
                         return;
                     }

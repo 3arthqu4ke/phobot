@@ -7,6 +7,7 @@ import me.earth.phobot.pathfinder.mesh.NavigationMeshManager;
 import me.earth.phobot.util.render.Renderer;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 
 import java.awt.*;
 import java.util.Set;
@@ -41,7 +42,15 @@ public class GraphDebugRenderer extends Listener<RenderEvent> {
 
                                     // TODO: maybe make line point somewhere?
                                     event.getLineColor().set(color);
-                                    event.getAabb().set(node.getX() + 0.5 + xOff / 3.9, node.getY(), node.getZ()  + 0.5+ zOff / 3.9, node.getX() + 0.5 + xOff / 3.9 + 0.01, node.getY(), node.getZ()  + 0.5+ zOff / 3.9 + 0.01);
+                                    event.getAabb().set(
+                                            node.getX() + 0.5 + xOff / 3.9,
+                                            node.getY(),
+                                            node.getZ() + 0.5 + zOff / 3.9,
+                                            node.getX() + 0.5 + xOff / 3.9 + 0.01,
+                                            node.getY(),
+                                            node.getZ()  + 0.5 + zOff / 3.9 + 0.01
+                                    );
+
                                     Renderer.startLines(1.5f, true);
                                     Renderer.drawAABBOutline(event);
                                     Renderer.end(true);

@@ -5,16 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.invalidation.*;
 import me.earth.phobot.movement.Movement;
 import me.earth.phobot.util.collections.XZMap;
+import me.earth.phobot.util.math.PositionUtil;
 import me.earth.phobot.util.mutables.MutPos;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 // TODO: maintain "jump nodes" if we can jump from one node to the other?
 /**
@@ -91,11 +89,12 @@ public class NavigationMeshManager extends AbstractInvalidationManager<MeshNode,
         xZMap.clear();
     }
 
-    public Optional<MeshNode> getStartNode(Player player) {
-        // TODO: if player is not on ground check MeshNodes underneath, because for the MovementPathfinder we first need to drop down onto the node
-
-        // TODO: with the XZMap we can make this much more efficient?
-        return getMap().values().stream().min(Comparator.comparingDouble(n -> n.distanceSqToCenter(player.getX(), player.getY(), player.getZ())));
+    public Optional<MeshNode> getStartNode(Entity player) {
+        return PositionUtil.getPositionsUnderEntity(player, 0.5)
+                .stream()
+                .flatMap(pos -> xZMap.getOrDefault(pos, Collections.emptySet()).stream())
+                .filter(meshNode -> meshNode.getY() <= player.getY() + 1)
+                .min(Comparator.comparingDouble(n -> n.distanceSqToCenter(player.getX(), player.getY(), player.getZ())));
     }
 
 }

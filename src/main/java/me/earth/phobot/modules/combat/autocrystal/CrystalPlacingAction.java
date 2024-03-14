@@ -99,7 +99,8 @@ public class CrystalPlacingAction extends BlockPlacer.Action {
 
         int flags = InventoryContext.DEFAULT_SWAP_SWITCH;
         // check if we are holding food in our offhand, in that case switch into main hand
-        if (player.getItemInHand(InteractionHand.OFF_HAND).getItem().getFoodProperties() != null) {
+        if (player.getItemInHand(InteractionHand.OFF_HAND).getItem().isEdible()
+                && !player.getItemInHand(InteractionHand.MAIN_HAND).getItem().isEdible()) {
             flags = InventoryContext.PREFER_MAINHAND;
         }
 

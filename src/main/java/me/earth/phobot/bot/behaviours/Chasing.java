@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class Chasing extends Behaviour {
     private volatile CompletableFuture<?> future;
+    private Hole current;
 
     public Chasing(Bot bot) {
         super(bot, PRIORITY_CHASE);
@@ -29,7 +30,12 @@ public class Chasing extends Behaviour {
 
     @Override
     protected void update(LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
-        if (phobot.getPathfinder().isFollowingPath() || this.future != null || bot.getJumpDownFromSpawn().isAboveSpawn(player)) {
+        Hole current = this.current;
+        if (current != null && !current.isValid()) {
+            this.current = null;
+        }
+
+        if (this.future != null /*|| phobot.getPathfinder().isFollowingPath()*/ || bot.getJumpDownFromSpawn().isAboveSpawn(player)) {
             return;
         }
 
@@ -55,7 +61,8 @@ public class Chasing extends Behaviour {
 
         if (best == null) {
             log.info("Failed to chase " + target + " no hole in range found.");
-        } else {
+        } else if (!best.equals(this.current)) {
+            this.current = best;
             BlockPos pos = best.getAirParts().stream()
                     .min(Comparator.comparingDouble(p -> MathUtil.distance2dSq(p.getX(), p.getZ(), player.getX(), player.getZ())))
                     .orElseThrow();
