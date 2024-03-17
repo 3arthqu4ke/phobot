@@ -16,7 +16,7 @@ public class BunnyHop extends Movement {
     public State move(Player player, CollisionGetter level, State previous, Vec3 directionAndYMovement) {
         State state = previous.copy();
         state.setReset(false);
-        if (player.fallDistance > 5.0 || player.isInWater() || player.isInLava() || player.onClimbable() || player.isFallFlying()) {
+        if (shouldNotUseMovementHacks(player)) {
             state.reset();
             return state;
         }

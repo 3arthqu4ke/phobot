@@ -24,6 +24,9 @@ public class Pathfinding extends PhobotNameSpacedModule implements ConfigWithMin
     @Getter
     private final Setting<Boolean> render =
             bool("Render", false, "Render the pathfinding graph for debugging.");
+    @Getter
+    private final Setting<Boolean> renderAlgorithm =
+            bool("Render-Algorithm", true, "Renders the pathfinding algorithm while it is running.");
     private final ExecutorService executor;
 
     public Pathfinding(PingBypass pingBypass, ExecutorService executor) {

@@ -4,14 +4,13 @@ import lombok.Getter;
 import lombok.Setter;
 import me.earth.phobot.invalidation.CanBeInvalidated;
 import me.earth.phobot.invalidation.ChunkWorker;
-import me.earth.phobot.pathfinder.algorithm.Abstract3iNode;
+import me.earth.phobot.pathfinder.algorithm.pooling.AbstractPooled3iNode;
+import me.earth.phobot.pathfinder.algorithm.pooling.NodeParallelizationPooling;
 import me.earth.phobot.util.math.PositionUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-
-import javax.swing.event.CaretListener;
 
 /**
  * A node in a mesh managed by {@link NavigationMeshManager}s for pathfinding.
@@ -22,7 +21,7 @@ import javax.swing.event.CaretListener;
  */
 @Getter
 @Setter
-public class MeshNode extends Abstract3iNode<MeshNode> implements CanBeInvalidated {
+public class MeshNode extends AbstractPooled3iNode<MeshNode> implements CanBeInvalidated {
     public static final int[] OPPOSITE_INDEX = {1, 0, 3, 2};
     public static final Vec3i[] OFFSETS = new Vec3i[] {
         new Vec3i(1, 0, 0),
@@ -40,12 +39,12 @@ public class MeshNode extends Abstract3iNode<MeshNode> implements CanBeInvalidat
     private boolean headSpace = false;
     private boolean valid = true;
 
-    public MeshNode(ChunkWorker chunk, int x, int y, int z) {
-        this(chunk, chunk.getVersion(), x, y, z);
+    public MeshNode(NodeParallelizationPooling pooling, ChunkWorker chunk, int x, int y, int z) {
+        this(pooling, chunk, chunk.getVersion(), x, y, z);
     }
 
-    public MeshNode(ChunkWorker chunk, int version, int x, int y, int z) {
-        super(x, y, z);
+    private MeshNode(NodeParallelizationPooling pooling, ChunkWorker chunk, int version, int x, int y, int z) {
+        super(pooling, x, y, z);
         this.chunk = chunk;
         this.version = version;
     }
@@ -63,6 +62,10 @@ public class MeshNode extends Abstract3iNode<MeshNode> implements CanBeInvalidat
     public Vec3 getCenter(BlockPos.MutableBlockPos pos, Level level) {
         double y = PositionUtil.getMaxYAtPosition(pos.set(getX(), getY() - 1, getZ()), level);
         return new Vec3(getX() + 0.5, y, getZ() + 0.5);
+    }
+
+    public BlockPos asBlockPos() {
+        return new BlockPos(getX(), getY(), getZ());
     }
 
 }

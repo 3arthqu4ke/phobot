@@ -1,10 +1,7 @@
 package me.earth.phobot.mixins.entity;
 
 import com.mojang.authlib.GameProfile;
-import me.earth.phobot.event.MoveEvent;
-import me.earth.phobot.event.PathfinderUpdateEvent;
-import me.earth.phobot.event.PostMotionPlayerUpdateEvent;
-import me.earth.phobot.event.PreMotionPlayerUpdateEvent;
+import me.earth.phobot.event.*;
 import me.earth.phobot.modules.movement.NoSlowDown;
 import me.earth.phobot.modules.movement.Velocity;
 import me.earth.pingbypass.PingBypassApi;
@@ -14,6 +11,7 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
@@ -22,6 +20,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(LocalPlayer.class)
 public abstract class MixinLocalPlayer extends AbstractClientPlayer {
+    @Shadow public abstract void tick();
+
     public MixinLocalPlayer(ClientLevel clientLevel, GameProfile gameProfile) {
         super(clientLevel, gameProfile);
         throw new IllegalStateException("MixinLocalPlayer constructor called!");
@@ -48,6 +48,11 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
     @Inject(method = "tick", at = @At(value = "FIELD", target = "Lnet/minecraft/client/player/LocalPlayer;ambientSoundHandlers:Ljava/util/List;", shift = At.Shift.BEFORE))
     private void postMotionPlayerUpdateHook(CallbackInfo ci) {
         PingBypassApi.getEventBus().post(new PostMotionPlayerUpdateEvent());
+    }
+
+    @Inject(method = "aiStep", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/Input;tick(ZF)V", shift = At.Shift.AFTER))
+    private void aiStepHook(CallbackInfo ci) {
+        PingBypassApi.getEventBus().post(new PostInputTickEvent());
     }
 
     @ModifyArg(

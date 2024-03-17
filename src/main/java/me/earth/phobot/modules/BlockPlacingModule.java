@@ -20,7 +20,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.Consumer;
 
 /**
  * Base class for modules that place blocks.

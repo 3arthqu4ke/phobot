@@ -5,7 +5,7 @@ import me.earth.phobot.util.mutables.MutVec3;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.PacketListener;
+import net.minecraft.core.Position;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -45,8 +45,8 @@ public class RotationUtil {
         return getRotations(entity.getX(), entity.getEyeY(), entity.getZ(), target.getX(), target.getY() + target.getEyeHeight() / 2.0, target.getZ(), entity.yRotO);
     }
 
-    public static float[] getRotations(Entity entity, Vec3 vec) {
-        return getRotations(entity.getX(), entity.getEyeY(), entity.getZ(), vec.x, vec.y, vec.z, entity.yRotO);
+    public static float[] getRotations(Entity entity, Position vec) {
+        return getRotations(entity.getX(), entity.getEyeY(), entity.getZ(), vec.x(), vec.y(), vec.z(), entity.yRotO);
     }
 
     public static float[] getRotations(Entity entity, double toX, double toY, double toZ) {

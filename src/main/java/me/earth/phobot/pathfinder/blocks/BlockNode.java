@@ -48,8 +48,8 @@ public class BlockNode implements PathfindingNode<BlockNode> {
     }
 
     @Override
-    public double distanceSq(BlockNode BlockNode) {
-        return BlockNode.getCurrent().distSqr(this.current);
+    public double distanceSq(BlockNode blockNode) {
+        return blockNode.getCurrent().distSqr(this.current);
     }
 
     @Override
@@ -68,8 +68,8 @@ public class BlockNode implements PathfindingNode<BlockNode> {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof BlockNode BlockNode)) return false;
-        return Objects.equals(getOffsetToCenter(), BlockNode.getOffsetToCenter());
+        if (!(o instanceof BlockNode blockNode)) return false;
+        return Objects.equals(getOffsetToCenter(), blockNode.getOffsetToCenter());
     }
 
     @Override

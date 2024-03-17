@@ -1,5 +1,6 @@
 package me.earth.phobot.modules.combat.autocrystal;
 
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
 import me.earth.phobot.damagecalc.DamageCalculator;
@@ -20,6 +21,7 @@ import net.minecraft.world.entity.player.Player;
 import org.apache.commons.lang3.mutable.MutableObject;
 
 @Slf4j
+@Setter
 public class BreakCalculation {
     protected final CrystalPlacingModule module;
     protected final Minecraft mc;
@@ -28,10 +30,13 @@ public class BreakCalculation {
     protected final ClientLevel level;
     protected final DamageCalculator calculator;
 
-    protected int crystalCount;
+    protected boolean breakCrystals = true;
+    protected int crystalBreakDelay;
+    protected boolean crystalExists;
     protected boolean attacked;
 
     public BreakCalculation(CrystalPlacingModule module, Minecraft mc, Phobot phobot, LocalPlayer player, ClientLevel level, DamageCalculator calculator) {
+        this.crystalBreakDelay = module.breakDelay().getValue();
         this.module = module;
         this.mc = mc;
         this.phobot = phobot;
@@ -50,13 +55,15 @@ public class BreakCalculation {
             }
         }
 
-        if (bestCrystal != null) {
+        if (bestCrystal != null && breakCrystals) {
             attack(bestCrystal);
         }
+
+        crystalExists = bestCrystal != null;
     }
 
     public boolean attack(Entity crystal) {
-        if (module.breakTimer().passed(module.breakDelay().getValue())) {
+        if (module.breakTimer().passed(crystalBreakDelay)) {
             // TODO: ROTATE
             phobot.getAttackService().attack(player, crystal);
             module.breakTimer().reset();
@@ -73,16 +80,11 @@ public class BreakCalculation {
         }
 
         float selfDamage = getSelfBreakDamage(crystal);
-        boolean goodCrystal = false;
         boolean better = false;
         if (selfDamage < EntityUtil.getHealth(player)) {
             for (Player enemy : level.players()) {
                 if (isValidPlayer(enemy, crystal.getX(), crystal.getY(), crystal.getZ())) {
                     float damage = getBreakDamage(crystal, enemy);
-                    if (damage > selfDamage) {
-                        goodCrystal = true;
-                    }
-
                     float ratio = damage / (selfDamage <= 0.0f ? 0.1f : selfDamage);
                     boolean isKilling = damage >= EntityUtil.getHealth(enemy);
                     if (ratio > bestRatio.getValue() && (isKilling || damage >= 0.5) && (!bestIsKilling.getValue() || isKilling)) {
@@ -92,10 +94,6 @@ public class BreakCalculation {
                     }
                 }
             }
-        }
-
-        if (goodCrystal) {
-            crystalCount++;
         }
 
         return better;

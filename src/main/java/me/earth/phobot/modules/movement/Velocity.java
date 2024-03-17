@@ -1,12 +1,13 @@
 package me.earth.phobot.modules.movement;
 
+import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
 import me.earth.phobot.modules.PhobotModule;
 import me.earth.phobot.modules.client.anticheat.MovementAntiCheat;
-import me.earth.phobot.util.ResetUtil;
+import me.earth.phobot.util.world.PredictionUtil;
 import me.earth.pingbypass.api.event.CancellingListener;
+import me.earth.pingbypass.api.event.SafeListener;
 import me.earth.pingbypass.api.event.event.CancellableEvent;
-import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.event.loop.LocalPlayerUpdateEvent;
 import me.earth.pingbypass.api.event.network.AsyncReceiveListener;
 import me.earth.pingbypass.api.event.network.PacketEvent;
@@ -21,64 +22,47 @@ import net.minecraft.network.protocol.game.ClientboundExplodePacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
-
-import java.util.concurrent.atomic.AtomicBoolean;
+import net.minecraft.world.entity.player.Player;
 
 import static net.minecraft.core.Direction.DOWN;
 import static net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK;
 
+@Slf4j
 public class Velocity extends PhobotModule {
-    private final Setting<Mode> mode = constant("Mode", Mode.Spam, "When to send Stop Destroy Block packets.");
+    private final Setting<Position> position = constant("Grim-Position", Position.Last, "The position to send when up against Grim AC");
     private final Setting<Boolean> lag = bool("Lag", true, "Turn off for a bit when lagging.");
-    private final AtomicBoolean grimCancelled = new AtomicBoolean();
 
     public Velocity(Phobot phobot) {
         super(phobot, "Velocity", Categories.MOVEMENT, "Prevents knockback.");
-        listen(new Listener<LocalPlayerUpdateEvent>() {
+        listen(new SafeListener<LocalPlayerUpdateEvent>(mc) {
             @Override
-            public void onEvent(LocalPlayerUpdateEvent event) {
+            public void onEvent(LocalPlayerUpdateEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
                 if (isLagging()) {
                     return;
                 }
 
                 if (phobot.getAntiCheat().getMovement().getValue() == MovementAntiCheat.Grim) {
-                    if (mode.getValue() == Mode.Spam || grimCancelled.get() && mode.getValue() == Mode.Delayed) {
-                        LocalPlayer p = event.getPlayer();
-                        // TODO: could we use this packet for rotations?
-                        p.connection.send(new ServerboundMovePlayerPacket.PosRot(p.getX(), p.getY(), p.getZ(), p.getYRot(), p.getXRot(), p.onGround()));
-                        p.connection.send(new ServerboundPlayerActionPacket(STOP_DESTROY_BLOCK, BlockPos.containing(p.position()), DOWN));
-                        grimCancelled.set(false);
-                    }
-                } else {
-                    grimCancelled.set(false);
+                    sendInvalidationPackets(player, level);
                 }
             }
         });
 
         listen(new AsyncReceiveListener<ClientboundSetEntityMotionPacket>(mc) {
             @Override
-            public void onEvent(PacketEvent.Receive<ClientboundSetEntityMotionPacket> e, LocalPlayer p, ClientLevel ignore, MultiPlayerGameMode ignored) {
+            public void onEvent(PacketEvent.Receive<ClientboundSetEntityMotionPacket> e, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
                 if (isLagging()) {
                     return;
                 }
 
-                if (e.getPacket().getId() == p.getId()) {
+                if (e.getPacket().getId() == player.getId()) {
                     e.setCancelled(true);
-                    if (phobot.getAntiCheat().getMovement().getValue() == MovementAntiCheat.Grim) {
-                        if (mode.getValue() == Mode.Answer) {
-                            p.connection.send(new ServerboundMovePlayerPacket.PosRot(p.getX(), p.getY(), p.getZ(), p.getYRot(), p.getXRot(), p.onGround()));
-                            p.connection.send(new ServerboundPlayerActionPacket(STOP_DESTROY_BLOCK, BlockPos.containing(p.position()), DOWN));
-                        } else if (mode.getValue() == Mode.Delayed) {
-                            grimCancelled.set(true);
-                        }
-                    }
                 }
             }
         });
 
-        listen(new Listener<PacketEvent.Receive<ClientboundExplodePacket>>() {
+        listen(new SafeListener<PacketEvent.Receive<ClientboundExplodePacket>>(mc) {
             @Override
-            public void onEvent(PacketEvent.Receive<ClientboundExplodePacket> event) {
+            public void onEvent(PacketEvent.Receive<ClientboundExplodePacket> event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
                 if (isLagging()) {
                     return;
                 }
@@ -87,30 +71,33 @@ public class Velocity extends PhobotModule {
                 explodePacket.setKnockbackX(0.0f);
                 explodePacket.setKnockbackY(0.0f);
                 explodePacket.setKnockbackZ(0.0f);
-                if (phobot.getAntiCheat().getMovement().getValue() == MovementAntiCheat.Grim) {
-                    LocalPlayer player = mc.player;
-                    if (mode.getValue() == Mode.Answer && player != null) {
-                        player.connection.send(new ServerboundPlayerActionPacket(STOP_DESTROY_BLOCK, BlockPos.containing(player.position()), DOWN));
-                    } else if (mode.getValue() == Mode.Delayed) {
-                        grimCancelled.set(true);
-                    }
-                }
             }
         });
 
         listen(new CancellingListener.WithSetting<>(PushOutOfBlocks.class, bool("Blocks", true, "Prevents you from getting pushed out of blocks.")));
         listen(new CancellingListener.WithSetting<>(Velocity.EntityPush.class, bool("Entities", true, "Prevents you from getting pushed by entities.")));
-        ResetUtil.onRespawnOrWorldChange(this, mc , () -> grimCancelled.set(false));
     }
 
     private boolean isLagging() {
         return lag.getValue() && phobot.getAntiCheat().getMovement().getValue() == MovementAntiCheat.Grim && !phobot.getLagbackService().passed(250L);
     }
 
-    public enum Mode {
-        Spam,
-        Answer,
-        Delayed
+    private void sendInvalidationPackets(LocalPlayer p, ClientLevel level) {
+        PredictionUtil.predict(level, seq -> {
+            if (position.getValue() == Position.Current) { // TODO: I think Current is actually worse? Get confirmation and remove it entirely?
+                p.connection.send(new ServerboundMovePlayerPacket.PosRot(p.getX(), p.getY(), p.getZ(), p.getYRot(), p.getXRot(), p.onGround()));
+            } else {
+                Player l = phobot.getLocalPlayerPositionService().getPlayerOnLastPosition(p);
+                p.connection.send(new ServerboundMovePlayerPacket.PosRot(l.getX(), l.getY(), l.getZ(), l.getYRot(), l.getXRot(), l.onGround()));
+            }
+
+            p.connection.send(new ServerboundPlayerActionPacket(STOP_DESTROY_BLOCK, BlockPos.containing(p.position()), DOWN, seq));
+        });
+    }
+
+    public enum Position {
+        Current,
+        Last
     }
 
     public static final class PushOutOfBlocks extends CancellableEvent {}

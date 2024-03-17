@@ -5,6 +5,7 @@ import me.earth.phobot.event.PostMotionPlayerUpdateEvent;
 import me.earth.phobot.event.PreMotionPlayerUpdateEvent;
 import me.earth.phobot.modules.PhobotModule;
 import me.earth.phobot.services.StealingDetectionService;
+import me.earth.phobot.services.SurroundService;
 import me.earth.phobot.services.inventory.InventoryContext;
 import me.earth.phobot.util.math.RotationUtil;
 import me.earth.phobot.util.mutables.MutVec3;
@@ -32,7 +33,7 @@ public class Repair extends PhobotModule {
     private final MutVec3 vec = new MutVec3();
     private boolean throwing;
 
-    public Repair(Phobot phobot) {
+    public Repair(Phobot phobot, SurroundService surroundService) {
         super(phobot, "Repair", Categories.MISC, "Tweaks for mending.");
         listen(new SafeListener<PreMotionPlayerUpdateEvent>(mc, 999) {
             @Override
@@ -42,11 +43,15 @@ public class Repair extends PhobotModule {
                     if (!ctx.has(Items.EXPERIENCE_BOTTLE)) {
                         return;
                     }
-
+                    // TODO: this isnt like the greatest way to do this
                     Criticality criticality = getCriticality(player);
-                    if (auto.getValue()
-                            && (criticality.criticality == 2 || (criticality.totalDurabilityMissing > 0.3f && !stealingDetectionService.couldDropsGetStolen(player, level)))
-                                    || middleClickExp.getValue() && phobot.getPingBypass().getKeyBoardAndMouse().isPressed(Key.Type.MOUSE, Keys.MOUSE_3)) {
+                    if (middleClickExp.getValue() && phobot.getPingBypass().getKeyBoardAndMouse().isPressed(Key.Type.MOUSE, Keys.MOUSE_3)
+                            || auto.getValue() && (criticality.criticality == 2
+                                                    || (criticality.totalDurabilityMissing > 0.7f
+                                                            && !stealingDetectionService.couldDropsGetStolen(player, level)))
+                                                    || (criticality.totalDurabilityMissing > 0.3f
+                                                            && surroundService.isSurrounded()
+                                                            && !stealingDetectionService.couldDropsGetStolen(player, level))) {
                         if (rotate.getValue()) {
                             float[] rotations = RotationUtil.lookIntoMoveDirection(player, vec);
                             phobot.getMotionUpdateService().rotate(player, rotations[0], rotations[1]);

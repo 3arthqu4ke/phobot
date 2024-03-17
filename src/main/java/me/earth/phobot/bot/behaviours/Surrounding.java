@@ -16,7 +16,13 @@ public class Surrounding extends Behaviour {
 
     @Override
     protected void update(LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
-        if (phobot.getPathfinder().isFollowingPath() || bot.getJumpDownFromSpawn().isAboveSpawn(player)) {
+        if (phobot.getPathfinder().isFollowingPath()
+                || bot.getJumpDownFromSpawn().isAboveSpawn(player)
+                || level.players().stream() // no players near us, no need to surround
+                        .filter(p -> p != player)
+                        .filter(p -> !bot.getJumpDownFromSpawn().isAboveSpawn(p))
+                        .filter(p -> !pingBypass.getFriendManager().contains(p.getUUID()))
+                        .noneMatch(p -> p.distanceToSqr(player) < 40.0 * 40.0)) {
             return;
         }
 

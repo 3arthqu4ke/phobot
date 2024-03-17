@@ -101,7 +101,7 @@ public class Escape extends Behaviour {
         // TODO: service that checks once every tick whether we can reach the currently closest MeshNode?
         if (meshNode.isEmpty()) {
             trapped = false;
-        } else if (meshNode.get().distanceSqToCenter(player.getX(), player.getY(), player.getZ()) >= 2.0) {
+        } else if (meshNode.get().distanceSqToCenter(player.getX(), player.getY(), player.getZ()) >= 2.0 && player.onGround()) {
             trapped = true;
         } else {
             Set<MeshNode> nodes = new HashSet<>();

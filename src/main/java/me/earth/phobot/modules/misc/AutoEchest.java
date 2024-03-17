@@ -23,6 +23,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
+// TODO: make this more robust!
 // TODO: check for enemies that could pick up
 @Slf4j
 public class AutoEchest extends BlockPlacingModule {

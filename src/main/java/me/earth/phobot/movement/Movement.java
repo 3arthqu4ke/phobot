@@ -73,11 +73,12 @@ public class Movement {
     }
 
     public boolean shouldNotUseMovementHacks(Player player) {
+        // TODO: maybe this fallDistance is not enough? got lags when strafing above it
         return player.fallDistance > 5.0 || player.isInWater() || player.isInPowderSnow || player.isInLava() || player.onClimbable() || player.isFallFlying();
     }
 
     public double getDeltaYOnGround() {
-        return GRAVITY * DRAG;
+        return -GRAVITY * DRAG;
     }
 
     @Data

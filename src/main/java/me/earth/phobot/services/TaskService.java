@@ -5,7 +5,7 @@ import me.earth.pingbypass.api.event.SubscriberImpl;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.event.loop.GameloopEvent;
 import me.earth.pingbypass.api.module.Module;
-import net.minecraft.client.Minecraft;
+import net.minecraft.util.thread.BlockableEventLoop;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.PriorityQueue;
@@ -13,9 +13,9 @@ import java.util.Queue;
 
 public class TaskService extends SubscriberImpl {
     private final Queue<Task> tasks = new PriorityQueue<>();
-    private final Minecraft mc;
+    private final BlockableEventLoop<Runnable> mc;
 
-    public TaskService(Minecraft mc) {
+    public TaskService(BlockableEventLoop<Runnable> mc) {
         this.mc = mc;
         listen(new Listener<GameloopEvent>() {
             @Override

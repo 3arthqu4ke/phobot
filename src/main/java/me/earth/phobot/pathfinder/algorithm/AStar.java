@@ -1,5 +1,6 @@
 package me.earth.phobot.pathfinder.algorithm;
 
+import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.pathfinder.util.Cancellation;
 import me.earth.phobot.pathfinder.util.OpenSet;
 import org.jetbrains.annotations.Nullable;
@@ -13,6 +14,7 @@ import java.util.TreeSet;
  * An implementation of the A-Star algorithm for {@link PathfindingNode}s.
  * @param <N> the type of node to use for pathfinding.
  */
+@Slf4j
 public class AStar<N extends PathfindingNode<N>> extends Dijkstra<N> {
     protected final Map<N, Double> fScore = new HashMap<>();
 
@@ -22,25 +24,25 @@ public class AStar<N extends PathfindingNode<N>> extends Dijkstra<N> {
 
     @Override
     public @Nullable Algorithm.Result<N> run(Cancellation cancellation) {
-        fScore.put(start, heuristic(goal, start));
+        setFScore(start, heuristic(goal, start));
         return super.run(cancellation);
     }
 
     @Override
     protected OpenSet<N> createOpenSet() {
-        return OpenSet.wrap(new TreeSet<>(Comparator.comparingDouble((N o) -> fScore.get(o)).thenComparing(o -> heuristic(goal, o)).thenComparing(o -> o)));
+        return OpenSet.wrap(new TreeSet<>(Comparator.comparingDouble(this::getFScore).thenComparing(o -> heuristic(goal, o)).thenComparing(o -> o)));
     }
 
     @Override
     protected void evaluate(N current, N neighbour) {
-        double tentative_gScore = gScore.getOrDefault(current, Double.POSITIVE_INFINITY) + getCost(current, neighbour);
-        if (tentative_gScore < gScore.getOrDefault(neighbour, Double.POSITIVE_INFINITY)) {
+        double tentative_gScore = getGScore(current) + getCost(current, neighbour);
+        if (tentative_gScore < getGScore(neighbour)) {
             cameFrom.put(neighbour, current);
-            gScore.put(neighbour, tentative_gScore);
-            if (fScore.containsKey(neighbour)) {
-                openSet.update(neighbour, () -> fScore.put(neighbour, tentative_gScore + heuristic(goal, neighbour)));
+            setGScore(neighbour, tentative_gScore);
+            if (hasFScore(neighbour)) {
+                openSet.update(neighbour, () -> setFScore(neighbour, tentative_gScore + heuristic(goal, neighbour)));
             } else {
-                fScore.put(neighbour, tentative_gScore + heuristic(goal, neighbour));
+                setFScore(neighbour, tentative_gScore + heuristic(goal, neighbour));
                 openSet.add(neighbour);
             }
         }
@@ -48,6 +50,18 @@ public class AStar<N extends PathfindingNode<N>> extends Dijkstra<N> {
 
     protected double heuristic(N goal, N node) {
         return goal.distance(node);
+    }
+
+    protected boolean hasFScore(N node) {
+        return fScore.containsKey(node);
+    }
+
+    protected void setFScore(N node, double f) {
+        fScore.put(node, f);
+    }
+
+    protected double getFScore(N node) {
+        return fScore.get(node);
     }
 
 }

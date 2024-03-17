@@ -22,7 +22,25 @@
     "CC": false,
     "CloseInventory": false,
     "Opposite": true,
-    "Optimization": "CC"
+    "Optimization": "None"
+  },
+  "AntiFacePlace": {
+    "Enabled": false,
+    "Delay": 30,
+    "NoGlitchBlocks": false,
+    "PacketRotations": false,
+    "Helping": 0,
+    "Disable": true,
+    "Swap": -1,
+    "Auto": false
+  },
+  "AntiRubberBand": {
+    "Enabled": true,
+    "Time": 250
+  },
+  "AntiWeakness": {
+    "Enabled": true,
+    "Mode": "Switch"
   },
   "AutoConnect": {
     "Enabled": false,
@@ -35,24 +53,27 @@
   "AutoCrystal": {
     "Enabled": true,
     "MinDamage": 6.0,
-    "PlaceDelay": 25,
-    "BreakDelay": 18,
+    "PlaceDelay": 36,
+    "BreakDelay": 25,
     "MultiThreading": true,
-    "ReplaceTime": 25,
-    "ReCalcTime": 25,
+    "ReplaceTime": 38,
+    "ReCalcTime": 0,
     "MaxDeathTime": 40,
     "Balance": 2.0,
-    "MinFactor": 2.0,
+    "MinFactor": 1.0,
     "Terrain": false,
     "Obsidian": 1,
-    "ReplaceWhenFailedPlace": false,
     "MinObsidianDamage": 10.0,
     "Faceplace": 10.0,
     "Armor": 7.5,
-    "FacePlaceWhenUnsafe": true,
-    "FastWhenUnsafe": true,
+    "FacePlaceWhenUnsafe": false,
+    "FastWhenUnsafe": false,
     "PlacePrediction": 1,
     "BreakPrediction": 0,
+    "PacketRotations": "None",
+    "GameLoop": false,
+    "GameLoopDelay": 25,
+    "Poll-BreakDelay": 74,
     "NoGlitchBlocks": false
   },
   "AutoEat": {
@@ -80,20 +101,24 @@
     "Enabled": true,
     "Mode": "None",
     "InvincibilityFrames": false,
-    "Sword-Gap": false
+    "Sword-Gap": true
   },
   "AutoTrap": {
     "Enabled": false,
     "Delay": 30,
     "NoGlitchBlocks": false,
-    "PacketRotations": "Always",
+    "PacketRotations": "Surrounded",
     "Helping": 5
+  },
+  "Blink": {
+    "Enabled": false,
+    "Auto": 17
   },
   "Blocker": {
     "Enabled": true,
     "Delay": 30,
     "NoGlitchBlocks": false,
-    "Ticks": 3
+    "Ticks": 4
   },
   "Bomber": {
     "Enabled": true,
@@ -103,18 +128,21 @@
   },
   "Criticals": {
     "Enabled": true,
-    "Mode": "Few"
+    "Mode": "Many"
   },
   "Debug": {
     "Enabled": true,
-    "Break": false,
+    "Break": true,
     "Prediction": true,
     "ClosestCrystalDamage": false,
     "F5Rotations": true,
     "FixPosition": true
   },
   "FakePlayer": {
-    "Enabled": true
+    "Enabled": false,
+    "Pathfinder": true,
+    "Record": false,
+    "Play": true
   },
   "FastFall": {
     "Enabled": false,
@@ -151,7 +179,7 @@
     "Enabled": false,
     "Incoming": true,
     "Outgoing": true,
-    "Info": false,
+    "Info": true,
     "Chat": true,
     "StackTrace": false,
     "Buffer": false,
@@ -160,11 +188,12 @@
     "Filter": "Include",
     "Packets": {
       "values": [
-        "ServerboundInteractPacket",
+        "ServerboundUseItemPacket",
+        "ClientboundSetEntityMotionPacket",
         "ClientboundPlayerPositionPacket"
       ],
       "action": "ADD",
-      "value": "ClientboundPlayerPositionPacket"
+      "value": "ServerboundUseItemPacket"
     }
   },
   "NoInterp": {
@@ -185,7 +214,7 @@
   },
   "NoSlowDown": {
     "Enabled": true,
-    "Offhand": true
+    "Offhand": "Use"
   },
   "Notifications": {
     "Enabled": true,
@@ -208,13 +237,16 @@
     "MaxHeight": 140,
     "MinHeight": -64,
     "Render": false,
+    "Render-Algorithm": true,
     "Debug": false
   },
   "Phobot": {
     "Enabled": false,
     "BuildHeight": 57,
+    "Parallel-Searches": 6,
     "Rotate": true,
-    "Duel": false
+    "Duel": false,
+    "Aura": true
   },
   "Potions": {
     "Enabled": true,
@@ -248,7 +280,7 @@
     "Helping": 3,
     "Auto": true,
     "Distance": 2.0,
-    "Prediction": 3
+    "Prediction": 4
   },
   "Speed": {
     "Enabled": false
@@ -269,33 +301,37 @@
     "Hold": true
   },
   "Stop": {
-    "Enabled": false
+    "Enabled": false,
+    "Hold": false
   },
   "Strafe": {
     "Enabled": false
   },
   "Suicide": {
     "Enabled": false,
-    "Command": false,
+    "Mode": "All",
     "MinDamage": 6.0,
-    "PlaceDelay": 0,
-    "BreakDelay": 0,
-    "MultiThreading": true,
+    "PlaceDelay": 45,
+    "BreakDelay": 25,
+    "MultiThreading": false,
     "ReplaceTime": 25,
-    "ReCalcTime": 25,
-    "MaxDeathTime": 45,
+    "ReCalcTime": 0,
+    "MaxDeathTime": 40,
     "Balance": 2.0,
     "MinFactor": 2.0,
     "Terrain": false,
     "Obsidian": 1,
-    "ReplaceWhenFailedPlace": false,
     "MinObsidianDamage": 10.0,
     "Faceplace": 10.0,
     "Armor": 7.5,
     "FacePlaceWhenUnsafe": false,
     "FastWhenUnsafe": false,
-    "PlacePrediction": 0,
+    "PlacePrediction": 3,
     "BreakPrediction": 0,
+    "PacketRotations": "None",
+    "GameLoop": false,
+    "GameLoopDelay": -1,
+    "Poll-BreakDelay": 100,
     "NoGlitchBlocks": false
   },
   "Surround": {
@@ -303,13 +339,13 @@
     "Delay": 25,
     "NoGlitchBlocks": true,
     "PacketRotations": true,
-    "Disable": true,
-    "AntiFacePlace": false,
     "Helping": 10,
-    "Swap": false
+    "Disable": true,
+    "Swap": 500,
+    "Center": true
   },
   "Swing": {
-    "Enabled": true,
+    "Enabled": false,
     "Mode": "Override"
   },
   "Timer": {
@@ -319,6 +355,7 @@
   },
   "Velocity": {
     "Enabled": true,
+    "Grim-Position": "Last",
     "Lag": true,
     "Blocks": true,
     "Entities": true

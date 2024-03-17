@@ -9,6 +9,7 @@
     "IVoxelShape",
     "MixinMinecraft",
     "MixinOptions",
+    "entity.IEntity",
     "entity.ILivingEntity",
     "entity.IPlayer",
     "entity.MixinAbstractClientPlayer",

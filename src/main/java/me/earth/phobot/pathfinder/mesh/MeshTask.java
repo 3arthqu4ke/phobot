@@ -97,7 +97,7 @@ public class MeshTask extends AbstractInvalidationTask<MeshNode, NavigationMeshM
         int z = pos.getZ();
 
         // double underneathY = collisionShape.max(Direction.Axis.Y) + pos.getY() - 3; // y when we stand on the solid underneath position
-        MeshNode node = new MeshNode(getChunk(), x, y, z);
+        MeshNode node = new MeshNode(getManager().getPooling(), getChunk(), x, y, z);
         node.setHeadSpace(headspace);
         putNode(new BlockPos(x, y, z), node);
 

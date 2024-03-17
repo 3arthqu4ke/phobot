@@ -5,14 +5,17 @@ import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
 import me.earth.phobot.pathfinder.algorithm.AStar;
 import me.earth.phobot.pathfinder.algorithm.Algorithm;
+import me.earth.phobot.pathfinder.algorithm.pooling.PooledAStar;
 import me.earth.phobot.pathfinder.mesh.MeshNode;
 import me.earth.phobot.pathfinder.mesh.NavigationMeshManager;
 import me.earth.phobot.pathfinder.movement.MovementPathfinder;
 import me.earth.phobot.pathfinder.render.AlgorithmRenderer;
+import me.earth.phobot.pathfinder.render.AlgorithmRendererManager;
 import me.earth.phobot.pathfinder.util.*;
 import me.earth.phobot.services.TaskService;
 import me.earth.pingbypass.PingBypass;
 import me.earth.pingbypass.api.event.api.EventBus;
+import me.earth.pingbypass.api.setting.Setting;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -29,19 +32,23 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Getter
 public class Pathfinder extends MovementPathfinder {
-    private static final long DEFAULT_TIME_OUT = TimeUnit.SECONDS.toMillis(10L);
+    public static final long DEFAULT_TIME_OUT = TimeUnit.MILLISECONDS.toMillis(Long.parseLong(System.getProperty("phobot.pathfinder.timeout", "250")));
 
     private final LevelBoundTaskManager levelBoundTaskManager = new LevelBoundTaskManager();
+    private final AlgorithmRendererManager algorithmRendererManager;
     private final NavigationMeshManager navigationMeshManager;
     private final ExecutorService executorService;
     private final TaskService taskService;
     private final PingBypass pingBypass;
     private final EventBus eventBus;
 
-    public Pathfinder(PingBypass pingBypass, EventBus eventBus, NavigationMeshManager navigationMeshManager, ExecutorService executorService, TaskService taskService) {
+    public Pathfinder(PingBypass pingBypass, EventBus eventBus, NavigationMeshManager navigationMeshManager, ExecutorService executorService, TaskService taskService,
+                      Setting<Boolean> shouldRender) {
         super(pingBypass);
         this.eventBus = eventBus;
         this.executorService = executorService;
+        this.algorithmRendererManager = new AlgorithmRendererManager(shouldRender);
+        this.algorithmRendererManager.getListeners().forEach(this::listen);
         this.levelBoundTaskManager.getListeners().forEach(this::listen);
         this.navigationMeshManager = navigationMeshManager;
         this.taskService = taskService;
@@ -80,12 +87,18 @@ public class Pathfinder extends MovementPathfinder {
      */
     public CancellableFuture<Algorithm.@NotNull Result<MeshNode>> findPath(MeshNode start, MeshNode goal, boolean render) {
         CancellableFuture<Algorithm.Result<MeshNode>> future;
-        var algorithm = new AStar<>(start, goal);
+        var algorithm = new PooledAStar<>(start, goal, navigationMeshManager.getPooling());
         future = CancellationTaskUtil.runWithTimeOut(algorithm, taskService, DEFAULT_TIME_OUT, executorService);
         future = FutureUtil.notNull(future);
         levelBoundTaskManager.addFuture(future);
         if (render) {
-            AlgorithmRenderer.render(future, eventBus, algorithm);
+            AlgorithmRenderer<MeshNode> renderer = new AlgorithmRenderer<>(algorithm);
+            algorithmRendererManager.add(renderer);
+            future.whenComplete((r,t) -> algorithmRendererManager.remove(renderer));
+            // this additionally is very important
+            // waiting for the future to complete is terrible when lots of Algorithms are running in parallel
+            // because it could take quite a while for the cancellation to arrive at the algorithm
+            taskService.addTaskToBeExecutedIn(DEFAULT_TIME_OUT, () -> algorithmRendererManager.remove(renderer));
         }
 
         return future;

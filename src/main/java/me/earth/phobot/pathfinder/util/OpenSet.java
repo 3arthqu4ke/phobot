@@ -20,8 +20,6 @@ public interface OpenSet<N> {
 
     int size();
 
-    void clear();
-
     default boolean isEmpty() {
         return size() == 0;
     }
@@ -50,11 +48,6 @@ public interface OpenSet<N> {
             @Override
             public int size() {
                 return sortedSet.size();
-            }
-
-            @Override
-            public void clear() {
-                sortedSet.clear();
             }
         };
     }

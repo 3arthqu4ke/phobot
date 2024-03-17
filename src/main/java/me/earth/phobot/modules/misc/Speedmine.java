@@ -490,7 +490,7 @@ public class Speedmine extends PhobotModule {
 
     private @Nullable Direction getDirection() {
         if (phobot.getAntiCheat().getMiningStrictDirection().getValue() == StrictDirection.Type.Vanilla) {
-            return Direction.DOWN;
+            return Direction.UP; // I think we like up the most because it automatically makes us rotate towards were the crystal will be
         }
 
         BlockPos currentPos = this.currentPos;

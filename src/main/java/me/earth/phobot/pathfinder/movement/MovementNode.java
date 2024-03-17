@@ -5,34 +5,46 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
+import me.earth.phobot.event.MoveEvent;
 import me.earth.phobot.movement.Movement;
+import me.earth.phobot.pathfinder.Path;
 import me.earth.phobot.pathfinder.algorithm.Abstract3dNode;
-import me.earth.phobot.util.math.PositionUtil;
+import me.earth.phobot.pathfinder.mesh.MeshNode;
 import me.earth.phobot.util.player.MovementPlayer;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Position;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
+import static me.earth.phobot.pathfinder.movement.EntityMovementSnapshot.dummy;
+
+/**
+ * Essentially a snapshots of an {@link Player}s position and movement related states after a call to {@link Player#travel(Vec3)}.
+ */
 @Setter
 @Getter
 @Accessors(fluent = true)
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 public class MovementNode extends Abstract3dNode<MovementNode> {
-    // TODO: track fallDistance!
     private final Movement.State state;
-    private final boolean horizontalCollision;
-    private final boolean verticalCollisionBelow;
-    private final boolean verticalCollision;
-    private final boolean onGround;
-    @EqualsAndHashCode.Exclude
-    private final float fallDistance;
+    private final EntityMovementSnapshot snapshot;
+    /**
+     * The {@link Player#getDeltaMovement()} the player has during the {@link MoveEvent}, after movement hack modules have been applied.
+     * @see #deltaReturnedForMoveEvent
+     * @see MovementPlayer#setMoveCallback(Function)
+     */
+    private final Vec3 deltaDuringMoveEvent;
+    /**
+     * The {@link Vec3} that was returned via {@link MoveEvent#setVec(Vec3)}.
+     * @see #deltaDuringMoveEvent
+     * @see MovementPlayer#setMoveCallback(Function)
+     */
+    private final Vec3 deltaReturnedForMoveEvent;
 
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
@@ -46,27 +58,27 @@ public class MovementNode extends Abstract3dNode<MovementNode> {
 
     private int targetNodeIndex;
 
-    public MovementNode(MovementNode node, @Nullable MovementNode goal, int targetNodeIndex) {
-        this(new Vec3(node.getX(), node.getY(), node.getZ()), node.state, goal,
-                node.horizontalCollision, node.verticalCollisionBelow, node.verticalCollision, node.onGround, node.fallDistance, targetNodeIndex);
-    }
-
     public MovementNode(Player player, Movement.State state, @Nullable MovementNode goal, int targetNodeIndex) {
-        this(player.position(), state, goal, player.horizontalCollision, player.verticalCollisionBelow,
-                player.verticalCollision, player.onGround(), player.fallDistance, targetNodeIndex);
+        this(player, state, goal, targetNodeIndex, player.getDeltaMovement(), player.getDeltaMovement());
     }
 
-    public MovementNode(Position pos, Movement.State state, @Nullable MovementNode goal, boolean horizontalCollision, boolean verticalCollisionBelow,
-                        boolean verticalCollision, boolean onGround, float fallDistance, int targetNodeIndex) {
+    public MovementNode(Player player, Movement.State state, @Nullable MovementNode goal, int targetNodeIndex, Vec3 deltaDuringMoveEvent, Vec3 deltaReturnedForMoveEvent) {
+        this(player.position(), state, goal, new EntityMovementSnapshot(player), targetNodeIndex, deltaDuringMoveEvent, deltaReturnedForMoveEvent);
+    }
+
+    public MovementNode(MovementNode node, @Nullable MovementNode goal, int targetNodeIndex) {
+        this(node.snapshot.getPosition(), node.state, goal, node.snapshot, targetNodeIndex, node.deltaDuringMoveEvent, node.deltaReturnedForMoveEvent);
+    }
+
+    public MovementNode(Position pos, Movement.State state, @Nullable MovementNode goal, EntityMovementSnapshot snapshot, int targetNodeIndex,
+                        Vec3 deltaDuringMoveEvent, Vec3 deltaReturnedForMoveEvent) {
         super(pos.x(), pos.y(), pos.z());
         this.state = state;
-        this.horizontalCollision = horizontalCollision;
-        this.verticalCollisionBelow = verticalCollisionBelow;
-        this.verticalCollision = verticalCollision;
-        this.onGround = onGround;
         this.goal = goal;
-        this.fallDistance = fallDistance;
+        this.snapshot = snapshot;
         this.targetNodeIndex = targetNodeIndex;
+        this.deltaDuringMoveEvent = deltaDuringMoveEvent;
+        this.deltaReturnedForMoveEvent = deltaReturnedForMoveEvent;
     }
 
     @Override
@@ -76,14 +88,7 @@ public class MovementNode extends Abstract3dNode<MovementNode> {
     }
 
     public void apply(Entity entity) {
-        // TODO: arent so many more fields that we should apply?! fallDistance being a recent example of an oversight
-        entity.setPos(getX(), getY(), getZ());
-        entity.setDeltaMovement(state.getDelta());
-        entity.setOnGround(onGround);
-        entity.horizontalCollision = horizontalCollision;
-        entity.verticalCollision = verticalCollision;
-        entity.verticalCollisionBelow = verticalCollisionBelow;
-        entity.fallDistance = fallDistance;
+        snapshot.apply(entity);
     }
 
     public boolean isGoal() {
@@ -94,14 +99,19 @@ public class MovementNode extends Abstract3dNode<MovementNode> {
         return targetNodeIndex == 0;
     }
 
-    public Set<BlockPos> getBlockedPositions(MovementPlayer player) {
-        player.setPos(getX(), getY(), getZ());
-        var result = new HashSet<BlockPos>();
-        for (double y = this.getY(); y <= player.getBoundingBox().maxY; y++) {
-            PositionUtil.getPositionsBlockedByEntityAtY(result, player, y);
-        }
+    public boolean onGround() {
+        return snapshot.isOnGround();
+    }
 
-        return result;
+    public UnaryOperator<Vec3> getMoveEventDeltaFunction(Player player) {
+        return delta -> {
+            player.setDeltaMovement(deltaDuringMoveEvent);
+            return deltaReturnedForMoveEvent;
+        };
+    }
+
+    public static MovementNode createGoalNode(Path<MeshNode> path, Vec3 gravity) {
+        return new MovementNode(path.getExactGoal(), new Movement.State(), null, dummy(path.getExactGoal(), gravity), path.getPath().size() - 1, gravity, gravity);
     }
 
 }

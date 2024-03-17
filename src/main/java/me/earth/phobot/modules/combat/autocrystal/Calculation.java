@@ -41,9 +41,7 @@ public class Calculation extends BreakCalculation implements Runnable {
     private final MutableObject<CrystalPosition> bestObbyPos = new MutableObject<>();
     private final MutableObject<CrystalPosition> bestBlockedByCrystalObbyPos = new MutableObject<>();
 
-    private boolean runBreakingCalculation = true;
     private boolean rotationActionCalculation = false;
-    private boolean hasBreakingCalculationRun = false;
     private boolean placed = false;
     private double maxY;
     private double eyeY;
@@ -55,17 +53,9 @@ public class Calculation extends BreakCalculation implements Runnable {
 
     @Override
     public void run() throws RunningOnDifferentThreadException {
-        if (runBreakingCalculation && module.breakTimer().passed(100)/*Don't run poll breaking that much*/) {
-            breakCrystals();
-        }
-
+        setCrystalBreakDelay(module.pollBreakDelay().getValue()); // higher poll break delay than break delay for spawning crystals!
+        breakCrystals();
         calculatePlacements(true, module.positionPool().getPositions());
-    }
-
-    @Override
-    public void breakCrystals() {
-        super.breakCrystals();
-        hasBreakingCalculationRun = true;
     }
 
     protected void preparePlaceCalculation() {
@@ -74,7 +64,7 @@ public class Calculation extends BreakCalculation implements Runnable {
     }
 
     protected void calculatePlacements(boolean obby, CrystalPosition... crystalPositions) {
-        if (!module.placeTimer().passed(module.placeDelay().getValue()) || crystalCount >= 1 && !attacked) {
+        if (!module.placeTimer().passed(module.placeDelay().getValue()) || crystalExists && !attacked) {
             return;
         }
 
@@ -232,7 +222,9 @@ public class Calculation extends BreakCalculation implements Runnable {
             return false;
         }
 
-        if (!hasBreakingCalculationRun) {
+        if (!breakCrystals && !attacked) {
+            setCrystalBreakDelay(module.breakDelay().getValue());
+            setBreakCrystals(true);
             breakCrystals();
         }
 
@@ -291,7 +283,7 @@ public class Calculation extends BreakCalculation implements Runnable {
         double maxY = 0.0;
         for (Player enemy : level.players()) {
             if (EntityUtil.isEnemyInRange(phobot.getPingBypass(), player, enemy, EntityUtil.RANGE + CrystalPlacingModule.CRYSTAL_RADIUS)) {
-                maxY = enemy.getY() + 1;
+                maxY = enemy.getY() + 3.0; // add some more lenience for predictions
             }
         }
 

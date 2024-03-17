@@ -2,12 +2,14 @@ package me.earth.phobot.pathfinder.mesh;
 
 import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.invalidation.ChunkWorker;
+import me.earth.phobot.pathfinder.algorithm.pooling.AbstractPooled3iNode;
 import me.earth.phobot.util.mutables.MutPos;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.level.Level;
 
 import java.util.HashSet;
+import java.util.Set;
 
 @Slf4j
 public abstract class AbstractMeshInvalidationTask extends MeshTask {
@@ -52,6 +54,14 @@ public abstract class AbstractMeshInvalidationTask extends MeshTask {
         getMap().remove(pos, node);
         removeFromXZMap(node);
         overwriteAdjacent(node, null);
+        cleanupCameFromPools(node);
+    }
+
+    protected void cleanupCameFromPools(MeshNode node) {
+        getManager().getXZMap().get(node.getX() + 1, node.getZ()).forEach(AbstractPooled3iNode::cleanupCameFromPool);
+        getManager().getXZMap().get(node.getX() - 1, node.getZ()).forEach(AbstractPooled3iNode::cleanupCameFromPool);
+        getManager().getXZMap().get(node.getX(), node.getZ() + 1).forEach(AbstractPooled3iNode::cleanupCameFromPool);
+        getManager().getXZMap().get(node.getX(), node.getZ() - 1).forEach(AbstractPooled3iNode::cleanupCameFromPool);
     }
 
 }

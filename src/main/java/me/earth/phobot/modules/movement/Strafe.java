@@ -16,7 +16,7 @@ public class Strafe extends PhobotModule {
         listen(new SafeListener<MoveEvent>(mc, 1_000) {
             @Override
             public void onEvent(MoveEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
-                if (!speed.isEnabled() && (player.input.forwardImpulse != 0.0f || player.input.leftImpulse != 0.0f)) {
+                if (!speed.isEnabled() && !phobot.getPathfinder().isFollowingPath() && (player.input.forwardImpulse != 0.0f || player.input.leftImpulse != 0.0f)) {
                     Movement.State state = phobot.getMovementService().getMovement().strafe(player, level, new Movement.State(), speed.getDirectionAndYMovement(player));
                     if (!state.isReset()) {
                         player.setDeltaMovement(state.getDelta());

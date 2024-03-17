@@ -1,7 +1,10 @@
 package me.earth.phobot;
 
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.bot.Bot;
 import me.earth.phobot.commands.GotoCommand;
+import me.earth.phobot.commands.HClipCommand;
 import me.earth.phobot.commands.KitCommand;
 import me.earth.phobot.holes.HoleManager;
 import me.earth.phobot.modules.client.*;
@@ -30,6 +33,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@Slf4j
+@Getter
 @SuppressWarnings("unused")
 public class PhobotPlugin extends AbstractUnloadablePlugin {
     private Phobot phobot;
@@ -50,6 +55,7 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
         super.unload();
         if (Objects.equals(PhobotApi.getPhobot(), phobot)) {
             if (phobot != null) {
+                phobot.getPathfinder().getLevelBoundTaskManager().cancelAll();
                 phobot.getPathfinder().cancel();
                 phobot.getInventoryService().releasePlayerUpdateLock();
             }
@@ -69,7 +75,6 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
         new HolesRenderListener(holeManager, holes).getListeners().forEach(holes::listen);
 
         ProtectionCacheService protectionCacheService = subscribe(unloadingService, new ProtectionCacheService(pingBypass.getMinecraft()));
-        AttackService attackService = subscribe(unloadingService, new AttackService(pingBypass.getMinecraft()));
         TotemPopService totemPopService = subscribe(unloadingService, new TotemPopService(pingBypass.getMinecraft()));
 
         DamageService damageService = subscribe(unloadingService, new DamageService(protectionCacheService, pingBypass.getMinecraft()));
@@ -83,7 +88,8 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
         LagbackService lagbackService = subscribe(unloadingService, new LagbackService());
 
         TaskService taskService = subscribe(unloadingService, new TaskService(pingBypass.getMinecraft()));
-        Pathfinder pathfinder = subscribe(unloadingService, new Pathfinder(pingBypass, unloadingService.getEventBus(), navigationMeshManager, executor, taskService));
+        Pathfinder pathfinder = subscribe(unloadingService,
+                new Pathfinder(pingBypass, unloadingService.getEventBus(), navigationMeshManager, executor, taskService, pathfinding.getRenderAlgorithm()));
 
         ServerService serverService = subscribe(unloadingService, new ServerService());
         AntiCheat antiCheat = new AntiCheat(pingBypass, serverService);
@@ -95,7 +101,14 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
 
         InventoryService inventoryService = subscribe(unloadingService, new InventoryService(antiCheat));
         MotionUpdateService motionUpdateService = subscribe(unloadingService, new MotionUpdateService(pingBypass.getMinecraft()));
-        BlockPlacer blockPlacer = subscribe(unloadingService, new BlockPlacer(localPlayerPositionService, motionUpdateService, inventoryService, pingBypass.getMinecraft(), antiCheat));
+
+        AntiWeakness antiWeakness = new AntiWeakness(pingBypass);
+        unloadingService.registerModule(antiWeakness);
+        AttackService attackService = subscribe(unloadingService, new AttackService(pingBypass.getMinecraft(), antiWeakness, inventoryService));
+
+        BlockPlacer blockPlacer = subscribe(unloadingService,
+                new BlockPlacer(localPlayerPositionService, motionUpdateService, inventoryService, pingBypass.getMinecraft(), antiCheat, attackService));
+
         BlockUpdateService blockUpdateService = subscribe(unloadingService, new BlockUpdateService());
         subscribe(unloadingService, new PlayerPredictionService(antiCheat, pingBypass.getMinecraft(), movementService));
         BlockDestructionService blockDestructionService = subscribe(unloadingService, new BlockDestructionService(pingBypass.getMinecraft()));
@@ -109,6 +122,7 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
 
     private void registerCommands(PingBypass pingBypass, Phobot phobot, PluginUnloadingService unloadingService) {
         unloadingService.registerCommand(new GotoCommand(phobot));
+        unloadingService.registerCommand(new HClipCommand(phobot));
         unloadingService.registerCommand(new KitCommand());
     }
 
@@ -122,7 +136,7 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
         unloadingService.registerModule(new NoInterp(pingBypass));
         unloadingService.registerModule(new AccountSpoof(pingBypass));
         unloadingService.registerModule(new LoggerModule(pingBypass));
-        unloadingService.registerModule(new Sprint(pingBypass));
+        unloadingService.registerModule(new Sprint(phobot));
         unloadingService.registerModule(new NoSlowDown(phobot));
         unloadingService.registerModule(new Velocity(phobot));
         unloadingService.registerModule(new Step(phobot));
@@ -136,11 +150,13 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
         unloadingService.registerModule(new Criticals(pingBypass));
         unloadingService.registerModule(new Swing(pingBypass));
         unloadingService.registerModule(new AutoConnect(phobot));
-        unloadingService.registerModule(new Repair(phobot));
         unloadingService.registerModule(new Potions(phobot));
         unloadingService.registerModule(new Fullbright(phobot));
         unloadingService.registerModule(new NoRender(phobot));
         unloadingService.registerModule(new AutoRespawn(phobot));
+        unloadingService.registerModule(new AntiFacePlace(phobot));
+        unloadingService.registerModule(new Blink(phobot));
+        unloadingService.registerModule(new AntiRubberBand(phobot));
 
         Speed speed = new Speed(phobot);
         unloadingService.registerModule(speed);
@@ -165,6 +181,7 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
         AutoMine autoMine = new AutoMine(phobot, speedmine, bomber, surround);
         unloadingService.registerModule(autoMine);
 
+        unloadingService.registerModule(new Repair(phobot, surroundService));
         unloadingService.registerModule(new SelfTrap(phobot, surroundService));
         unloadingService.registerModule(new AutoEat(phobot, killAura));
         unloadingService.registerModule(new HoleFiller(phobot, surroundService));
@@ -179,6 +196,7 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
         AtomicInteger id = new AtomicInteger();
         return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), runnable -> {
             Thread thread = new Thread(runnable);
+            thread.setDaemon(true); // should be ok no?
             thread.setName("Phobot-Thread-" + id.getAndIncrement());
             return thread;
         });

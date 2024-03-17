@@ -29,19 +29,21 @@ import net.minecraft.world.level.Level;
 import static me.earth.pingbypass.api.command.CommandSource.literal;
 
 public class Suicide extends CrystalPlacingModule implements HasCustomModuleCommand {
-    private final Setting<Boolean> command = boolBuilder("Command", false).withDescription("Uses a command instead of crystals to kill you.").build();
     private final Setting<Boolean> armor = boolBuilder("Armor", true).withDescription("Throws away your armor and totems.").build();
+    private final Setting<Mode> mode = enumBuilder("Mode", Mode.All).withDescription("The mode to use.").build();
+    private final StopWatch.ForSingleThread commandTimer = new StopWatch.ForSingleThread();
     private final StopWatch.ForSingleThread throwTimer = new StopWatch.ForSingleThread();
 
     public Suicide(Phobot phobot, SurroundService surroundService) {
         super(phobot, surroundService, "Suicide", Categories.COMBAT, "Kills you.");
-        registerAfter(command, getByName("Bind").orElseThrow());
-        registerAfter(armor, getByName("Command").orElseThrow());
+        registerAfter(mode, getByName("Bind").orElseThrow());
+        registerAfter(armor, getByName("Mode").orElseThrow());
         ResetUtil.disableOnRespawnAndWorldChange(this, mc);
         listen(new SafeListener<TickEvent>(mc) {
             @Override
             public void onEvent(TickEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
-                if (!sendCommand() && armor.getValue() && throwTimer.passed(phobot.getAntiCheat().getInventoryDelay().getValue())) {
+                sendCommand();
+                if (mode.getValue() != Mode.Command && armor.getValue() && throwTimer.passed(phobot.getAntiCheat().getInventoryDelay().getValue())) {
                     phobot.getInventoryService().use(context -> {
                         for (int i = InventoryMenu.ARMOR_SLOT_START; i < InventoryMenu.ARMOR_SLOT_END; i++) {
                             Slot slot = player.inventoryMenu.getSlot(i);
@@ -73,21 +75,18 @@ public class Suicide extends CrystalPlacingModule implements HasCustomModuleComm
 
     @Override
     protected void onEnable() {
+        commandTimer.setTimeStamp(0L);
         sendCommand();
     }
 
-    private boolean sendCommand() {
-        if (command.getValue()) {
+    private void sendCommand() {
+        if (mode.getValue() != Mode.AutoCrystal && commandTimer.passed(4_000L)) {
             LocalPlayer player = mc.player;
             if (player != null) {
                 player.connection.sendCommand("kill");
+                commandTimer.reset();
             }
-
-            this.disable();
-            return true;
         }
-
-        return false;
     }
 
     @Override
@@ -136,6 +135,12 @@ public class Suicide extends CrystalPlacingModule implements HasCustomModuleComm
 
     private <T> void syncSetting(Setting<T> autoCrystalSetting, Class<T> type) {
         getSetting(autoCrystalSetting.getName(), type).ifPresent(ourSetting -> ourSetting.setValue(autoCrystalSetting.getValue()));
+    }
+
+    public enum Mode {
+        Command,
+        AutoCrystal,
+        All
     }
 
 }

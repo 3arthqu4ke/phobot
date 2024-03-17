@@ -5,6 +5,21 @@
   "AntiCheat": {
     "Bind": []
   },
+  "AntiFacePlace": {
+    "Bind": [
+      {
+        "name": "Q",
+        "type": "KEYBOARD",
+        "code": 81
+      }
+    ]
+  },
+  "AntiRubberBand": {
+    "Bind": []
+  },
+  "AntiWeakness": {
+    "Bind": []
+  },
   "AutoConnect": {
     "Bind": []
   },
@@ -25,13 +40,7 @@
     ]
   },
   "AutoEat": {
-    "Bind": [
-      {
-        "name": "P",
-        "type": "KEYBOARD",
-        "code": 80
-      }
-    ]
+    "Bind": []
   },
   "AutoEchest": {
     "Bind": [
@@ -66,6 +75,15 @@
         "name": "Y",
         "type": "KEYBOARD",
         "code": 90
+      }
+    ]
+  },
+  "Blink": {
+    "Bind": [
+      {
+        "name": "B",
+        "type": "KEYBOARD",
+        "code": 66
       }
     ]
   },
@@ -218,7 +236,13 @@
         "code": 78
       }
     ],
-    "FacePlaceBind": []
+    "FacePlaceBind": [
+      {
+        "name": "MOUSE_1",
+        "type": "MOUSE",
+        "code": 0
+      }
+    ]
   },
   "Surround": {
     "Bind": [

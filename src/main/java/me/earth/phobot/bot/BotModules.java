@@ -3,6 +3,7 @@ package me.earth.phobot.bot;
 import lombok.Getter;
 import me.earth.phobot.modules.combat.*;
 import me.earth.phobot.modules.combat.autocrystal.AutoCrystal;
+import me.earth.phobot.modules.misc.AutoEat;
 import me.earth.phobot.modules.misc.AutoEchest;
 import me.earth.phobot.modules.misc.Repair;
 import me.earth.phobot.modules.movement.Scaffold;
@@ -14,6 +15,7 @@ import me.earth.pingbypass.api.module.ModuleManager;
  */
 @Getter
 public class BotModules {
+    private final AutoEat autoEat;
     private final AutoCrystal autoCrystal;
     private final KillAura killAura;
     private final Suicide suicide;
@@ -26,6 +28,7 @@ public class BotModules {
     private final Repair repair;
 
     public BotModules(ModuleManager modules) {
+        this.autoEat = modules.getByClass(AutoEat.class).orElseThrow();
         this.autoCrystal = modules.getByClass(AutoCrystal.class).orElseThrow();
         this.killAura = modules.getByClass(KillAura.class).orElseThrow();
         this.suicide = modules.getByClass(Suicide.class).orElseThrow();

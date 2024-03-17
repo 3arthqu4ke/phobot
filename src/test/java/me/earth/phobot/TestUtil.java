@@ -10,7 +10,10 @@ import me.earth.phobot.util.world.BlockStateLevel;
 import me.earth.phobot.util.world.DelegatingClientLevel;
 import net.minecraft.DetectedVersion;
 import net.minecraft.SharedConstants;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.*;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.worldgen.BootstapContext;
@@ -34,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -70,7 +74,6 @@ public class TestUtil {
             }
         };
 
-        //noinspection DataFlowIssue
         return new ClientLevel(DelegatingClientLevel.DummyClientPacketListener.create(registryAccess),
                 new ClientLevel.ClientLevelData(Difficulty.EASY, false, false),
                 resourceKey, holder, 0, 0, () -> InactiveProfiler.INSTANCE, null, false, 0);
@@ -90,18 +93,37 @@ public class TestUtil {
 
     public static BlockStateLevel.Delegating setupLevelFromJson(ClientLevel clientLevel, String json) {
         bootstrap();
-        return setupLevel(clientLevel, level -> {
-            try (InputStream is = Objects.requireNonNull(TestUtil.class.getClassLoader().getResourceAsStream(json), json + " was null!")) {
-                Type listType = new TypeToken<ArrayList<BlockWithPos>>(){}.getType();
-                List<BlockWithPos> blocks = new Gson().fromJson(new InputStreamReader(is), listType);
-                for (BlockWithPos blockWithPos : blocks) {
-                    Block block = BuiltInRegistries.BLOCK.get(new ResourceLocation(blockWithPos.getBlock()));
-                    level.getMap().put(new BlockPos(blockWithPos.getX(), blockWithPos.getY(), blockWithPos.getZ()), block.defaultBlockState());
-                }
-            } catch (IOException e) {
-                throw new IOError(e);
+        return setupLevel(clientLevel, level -> setupBlockStateLevelFromJson(level, json, BlockPos.ZERO));
+    }
+
+    public static void setupBlockStateLevelFromJson(BlockStateLevel.Delegating level, String json, BlockPos off) {
+        setupBlockStateLevelFromJson(json, (pos, block) ->
+                level.getMap().put(new BlockPos(pos.getX() + off.getX(), pos.getY() + off.getY(), pos.getZ() + off.getZ()), block.defaultBlockState()));
+    }
+
+    public static void setupBlockStateLevelFromJson(String json, BiConsumer<BlockWithPos, Block> action) {
+        try (InputStream is = Objects.requireNonNull(TestUtil.class.getClassLoader().getResourceAsStream(json), json + " was null!")) {
+            Type listType = new TypeToken<ArrayList<BlockWithPos>>(){}.getType();
+            List<BlockWithPos> blocks = new Gson().fromJson(new InputStreamReader(is), listType);
+            for (BlockWithPos pos : blocks) {
+                Block block = BuiltInRegistries.BLOCK.get(new ResourceLocation(pos.getBlock()));
+                action.accept(pos, block);
             }
-        });
+        } catch (IOException e) {
+            throw new IOError(e);
+        }
+    }
+
+    public static Minecraft createMinecraft(ClientLevel level) {
+        return createMinecraft(allocateInstance(LocalPlayer.class), level, allocateInstance(MultiPlayerGameMode.class));
+    }
+
+    public static Minecraft createMinecraft(LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
+        Minecraft mc = allocateInstance(Minecraft.class);
+        mc.player = player;
+        mc.level = level;
+        mc.gameMode = gameMode;
+        return mc;
     }
 
     private static List<DimensionType> getDimensionTypes() {
@@ -123,8 +145,7 @@ public class TestUtil {
     }
 
     @Data
-    @SuppressWarnings("ClassCanBeRecord")
-    private static class BlockWithPos {
+    public static class BlockWithPos {
         private final String block;
         private final int x;
         private final int y;

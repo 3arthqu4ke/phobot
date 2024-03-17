@@ -12,6 +12,7 @@ import net.minecraft.world.phys.Vec3;
 
 public class Stop extends PhobotNameSpacedModule {
     private final Setting<Boolean> hold = bool("Hold", false, "Disables this module when u let go of the bind.");
+
     public Stop(PingBypass pingBypass) {
         super(pingBypass, "Stop", Categories.MOVEMENT, "Stops all movement.");
         Setting<Bind> bind = getSetting("Bind", Bind.class).orElseThrow();
@@ -21,6 +22,7 @@ public class Stop extends PhobotNameSpacedModule {
                 event.setVec(Vec3.ZERO);
             }
         });
+
         listen(new Listener<TickEvent>() {
             @Override
             public void onEvent(TickEvent tickEvent) {

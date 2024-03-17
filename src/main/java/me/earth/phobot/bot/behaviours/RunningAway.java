@@ -4,23 +4,19 @@ import lombok.Getter;
 import me.earth.phobot.bot.Bot;
 import me.earth.phobot.holes.Hole;
 import me.earth.phobot.pathfinder.mesh.MeshNode;
-import me.earth.phobot.pathfinder.util.MultiPathSearch;
+import me.earth.phobot.pathfinder.parallelization.ParallelPathSearch;
 import me.earth.phobot.util.ResetUtil;
-import me.earth.phobot.util.math.MathUtil;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 
 @Getter
 public class RunningAway extends Behaviour {
     private final Set<Object> runningAwayRequests = new HashSet<>();
-    private MultiPathSearch<Hole> multiPathSearch;
 
     public RunningAway(Bot bot) {
         super(bot, PRIORITY_RUN_AWAY);
@@ -29,51 +25,40 @@ public class RunningAway extends Behaviour {
 
     @Override
     protected void update(LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
-        if (phobot.getPathfinder().isFollowingPath() || bot.getJumpDownFromSpawn().isAboveSpawn(player) || runningAwayRequests.isEmpty() || multiPathSearch != null) {
+        if (phobot.getPathfinder().isFollowingPath()
+                || bot.getJumpDownFromSpawn().isAboveSpawn(player)
+                || runningAwayRequests.isEmpty()
+                || pathSearchManager.isAtLeastEquallyImportantTo(this)
+                || player.getAbsorptionAmount() < 16.0f) {
             runningAwayRequests.clear();
             return;
         }
-        // TODO: trap enemy if we leave the same hole?
-        var multiPathSearch = new MultiPathSearch<Hole>();
-        this.multiPathSearch = multiPathSearch;
-        gotoHoles(multiPathSearch, player, 64.0);
-        if (multiPathSearch.getFutures().isEmpty()) {
-            gotoHoles(multiPathSearch, player, 4096.0);
-        }
 
-        multiPathSearch.allFuturesAdded();
-        if (multiPathSearch.getFutures().isEmpty()) {
-            this.multiPathSearch = null;
-        }
+        pathSearchManager.<Hole>applyForPathSearch(this, parallelPathSearch -> {
+            gotoHoles(parallelPathSearch, player, 64.0);
+            if (parallelPathSearch.getFutures().isEmpty()) {
+                gotoHoles(parallelPathSearch, player, 4096.0);
+            }
 
-        multiPathSearch.getFuture().thenAccept(result -> {
-            Hole hole = result.key();
-            mc.submit(() -> {
-                Vec3 goalPos = hole.getCenter();
-                phobot.getPathfinder().follow(phobot, result.algorithmResult(), goalPos);
+            parallelPathSearch.getFuture().thenAccept(result -> {
+                Hole hole = result.key();
+                mc.submit(() -> {
+                    Vec3 goalPos = hole.getCenter();
+                    phobot.getPathfinder().follow(phobot, result.algorithmResult(), goalPos);
+                });
             });
         });
-
-        multiPathSearch.getFuture().whenComplete((r,t) -> mc.submit(() -> {
-            if (this.multiPathSearch == multiPathSearch) {
-                this.multiPathSearch = null;
-            }
-        }));
     }
 
-    private void gotoHoles(MultiPathSearch<Hole> multiPathSearch, LocalPlayer player, double distanceSq) {
+    private void gotoHoles(ParallelPathSearch<Hole> multiPathSearch, LocalPlayer player, double distanceSq) {
         Set<Hole> holes = new HashSet<>();
         for (Hole hole : phobot.getHoleManager().getMap().values()) {
             if (!holes.contains(hole) && hole.getDistanceSqr(player) <= distanceSq) {
                 holes.add(hole);
-                BlockPos pos = hole.getAirParts().stream()
-                        .min(Comparator.comparingDouble(p -> MathUtil.distance2dSq(p.getX(), p.getZ(), player.getX(), player.getZ())))
-                        .orElseThrow();
-
-                MeshNode goal = phobot.getNavigationMeshManager().getMap().get(pos);
+                MeshNode goal = phobot.getNavigationMeshManager().findFirst(hole.getAirParts());
                 if (goal != null) {
                     multiPathSearch.findPath(hole, phobot.getPathfinder(), player, goal, true);
-                    if (multiPathSearch.getFutures().size() >= 10) {
+                    if (multiPathSearch.getFutures().size() >= bot.getParallelSearches().getValue()) {
                         return;
                     }
                 }
