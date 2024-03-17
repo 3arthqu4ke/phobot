@@ -7,6 +7,7 @@ import me.earth.phobot.util.mutables.MutPos;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -58,10 +59,16 @@ public abstract class AbstractMeshInvalidationTask extends MeshTask {
     }
 
     protected void cleanupCameFromPools(MeshNode node) {
-        getManager().getXZMap().get(node.getX() + 1, node.getZ()).forEach(AbstractPooled3iNode::cleanupCameFromPool);
-        getManager().getXZMap().get(node.getX() - 1, node.getZ()).forEach(AbstractPooled3iNode::cleanupCameFromPool);
-        getManager().getXZMap().get(node.getX(), node.getZ() + 1).forEach(AbstractPooled3iNode::cleanupCameFromPool);
-        getManager().getXZMap().get(node.getX(), node.getZ() - 1).forEach(AbstractPooled3iNode::cleanupCameFromPool);
+        cleanupCameFromPools(getManager().getXZMap().get(node.getX() + 1, node.getZ()));
+        cleanupCameFromPools(getManager().getXZMap().get(node.getX() - 1, node.getZ()));
+        cleanupCameFromPools(getManager().getXZMap().get(node.getX(), node.getZ() + 1));
+        cleanupCameFromPools(getManager().getXZMap().get(node.getX(), node.getZ() - 1));
+    }
+
+    protected void cleanupCameFromPools(@Nullable Set<MeshNode> meshNodes) {
+        if (meshNodes != null) {
+            meshNodes.forEach(AbstractPooled3iNode::cleanupCameFromPool);
+        }
     }
 
 }

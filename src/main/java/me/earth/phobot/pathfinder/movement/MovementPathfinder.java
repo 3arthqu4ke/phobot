@@ -181,7 +181,7 @@ public class MovementPathfinder extends SubscriberImpl {
                 Vec3 deltaDuringMoveEvent = next.deltaDuringMoveEvent();
                 Vec3 deltaReturnedForMoveEvent = next.deltaReturnedForMoveEvent();
                 if (player instanceof LocalPlayer lp && lp.input.shiftKeyDown) {
-                    float sneakSpeedModifier = Mth.clamp(0.3F + EnchantmentHelper.getSneakingSpeedBonus(lp), 0.0f, 1.0f);
+                    float sneakSpeedModifier = Mth.clamp(0.3f + EnchantmentHelper.getSneakingSpeedBonus(lp), 0.0f, 1.0f);
                     deltaDuringMoveEvent = deltaDuringMoveEvent.multiply(sneakSpeedModifier, 1.0, sneakSpeedModifier);
                     deltaReturnedForMoveEvent = deltaReturnedForMoveEvent.multiply(sneakSpeedModifier, 1.0, sneakSpeedModifier);
                 }

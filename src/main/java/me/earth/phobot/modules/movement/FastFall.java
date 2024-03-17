@@ -23,7 +23,6 @@ import net.minecraft.world.phys.Vec3;
 public class FastFall extends PhobotModule {
     private final Setting<Double> speed = precise("Speed", 3.1, 0.1, 10.0, "The speed you are going to fall with.");
 
-
     public FastFall(Phobot phobot, Speed speed) {
         super(phobot, "FastFall", Categories.MOVEMENT, "Makes you fall fast.");
         listen(new SafeListener<MoveEvent>(mc, -1000) {
@@ -32,8 +31,8 @@ public class FastFall extends PhobotModule {
                 if (!phobot.getPathfinder().isFollowingPath()
                         && !mc.options.keyJump.isDown()
                         && !mc.options.keyShift.isDown()
-                        && canFastFall(player, event.getVec(), level, speed.isEnabled())) {;
-                        event.setVec(getFastFallVec(event.getVec()));
+                        && canFastFall(player, event.getVec(), level, speed.isEnabled())) {
+                    event.setVec(getFastFallVec(event.getVec()));
                 }
             }
         });
@@ -49,7 +48,6 @@ public class FastFall extends PhobotModule {
         // TODO: phobot.getLagbackService?
         return !speedIsOn
                 && !phobot.getMovementService().getMovement().shouldNotUseMovementHacks(player)
-                && player.onGround()
                 && player.fallDistance < 0.5
                 && player.getDeltaMovement().y < 0
                 && player.onGround()
@@ -83,4 +81,5 @@ public class FastFall extends PhobotModule {
 
         return -1;
     }
+
 }

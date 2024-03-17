@@ -23,6 +23,7 @@ import me.earth.pingbypass.api.event.SafeListener;
 import me.earth.pingbypass.api.event.event.CancellableEvent;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.event.network.PacketEvent;
+import me.earth.pingbypass.api.gui.hud.DisplaysHudInfo;
 import me.earth.pingbypass.api.module.impl.Categories;
 import me.earth.pingbypass.api.setting.Setting;
 import me.earth.pingbypass.api.setting.impl.Complexities;
@@ -59,7 +60,7 @@ import java.util.Objects;
 // TODO: test what happens when target is out of range more, instead of just aborting
 // TODO: make the rendering a bit smarter
 @Slf4j
-public class Speedmine extends PhobotModule {
+public class Speedmine extends PhobotModule implements DisplaysHudInfo {
     private final Setting<Boolean> fast = bool("Fast", true, "Allows you mine blocks quicker if you place them on the same position.");
     private final Setting<Boolean> silentSwitch = bool("Switch", true, "Silently switches to your tool to mine.");
     private final Setting<Boolean> noGlitchBlocks = bool("NoGlitchBlocks", false, "If off sets the block to air on the clientside immediately.");
@@ -222,6 +223,26 @@ public class Speedmine extends PhobotModule {
         ResetUtil.onRespawnOrWorldChange(this, mc, this::reset);
     }
 
+    @Override
+    public String getHudInfo() {
+        return null;
+    }
+
+    public int getTimeLeftMS(LocalPlayer player, ClientLevel level) {
+        BlockPos current = getCurrentPos();
+        if (current == null) {
+            return Integer.MAX_VALUE;
+        }
+
+        return phobot.getInventoryService().supply(context -> {
+            MutableObject<Float> bestDamage = new MutableObject<>(0.0f);
+            MutableObject<Float> bestDamageDelta = new MutableObject<>(0.0f);
+            calculateSlots(context, player, level, bestDamage, new MutableObject<>(), bestDamageDelta);
+            float timeLeft = ((1.0f - bestDamage.getValue()) / bestDamageDelta.getValue()) * 50;
+            return (int) timeLeft;
+        }, true, Integer.MAX_VALUE);
+    }
+
     private void update(ClientLevel level, LocalPlayer player, MultiPlayerGameMode gameMode) {
         Direction currentDirection = getDirection();
         if (currentDirection == null) {
@@ -319,11 +340,25 @@ public class Speedmine extends PhobotModule {
     }
 
     public @Nullable Slot getBreakingSlot(InventoryContext context, LocalPlayer player, ClientLevel level) {
-        final MutableObject<Float> bestDamage = new MutableObject<>(0.0f);
+        MutableObject<Float> bestDamage = new MutableObject<>(0.0f);
         MutableObject<Slot> bestSlot = new MutableObject<>();
+        calculateSlots(context, player, level, bestDamage, bestSlot, new MutableObject<>(0.0f));
+        if (bestSlot.getValue() != null) {
+            renderDamageDelta = getDestroyProgress(currentPos, currentState, level, player, bestSlot.getValue().getItem(), true);
+        }
+
+        return bestDamage.getValue() >= 1.0f ? bestSlot.getValue() : null;
+    }
+
+    private double getTicks() {
+        return timer.getPassedTime() / 50.0 - (addTick.getValue() ? 1 : 0);
+    }
+
+    private void calculateSlots(InventoryContext context, LocalPlayer player, ClientLevel level,
+                                MutableObject<Float> bestDamage, MutableObject<Slot> bestSlot, MutableObject<Float> bestDamageDelta) {
         context.find(slot -> {
             ItemStack stack = slot.getItem();
-            double ticks = timer.getPassedTime() / 50.0 - (addTick.getValue() ? 1 : 0);
+            double ticks = getTicks();
             float damage = 0.0f;
             for (PlayerPosition position : phobot.getLocalPlayerPositionService().getTickPositions()) {
                 damage += getDestroyProgress(currentPos, currentState, level, player, stack, position.isOnGround());
@@ -338,6 +373,11 @@ public class Speedmine extends PhobotModule {
                 ticks--;
             }
 
+            float damageDelta = getDestroyProgress(currentPos, currentState, level, player, stack, true);
+            if (damageDelta > bestDamageDelta.getValue()) {
+                bestDamageDelta.setValue(damageDelta);
+            }
+
             boolean isCurrentAndCanBreak = context.isSelected(slot) && damage >= 1.0f;
             if (damage > bestDamage.getValue() || isCurrentAndCanBreak) {
                 bestDamage.setValue(damage);
@@ -349,12 +389,6 @@ public class Speedmine extends PhobotModule {
 
             return null;
         });
-
-        if (bestSlot.getValue() != null) {
-            renderDamageDelta = getDestroyProgress(currentPos, currentState, level, player, bestSlot.getValue().getItem(), true);
-        }
-
-        return bestDamage.getValue() >= 1.0f ? bestSlot.getValue() : null;
     }
 
     public void startDestroy(BlockPos pos, ClientLevel level, LocalPlayer player) {

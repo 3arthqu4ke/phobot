@@ -39,6 +39,7 @@ public class Swording extends Behaviour {
                 || !bot.getModules().getKillAura().isEnabled()
                 || phobot.getInventoryService().isLockedIntoTotem()
                 || !bot.getSurroundService().isSurrounded()
+                || !bot.getModules().getBomber().getLastBombing().passed(3_000L) // Bombing is cooler than Swording! TODO: also when we are about to bomb?!
                 || (stoppedBecauseTimer = !timer.passed(3_500L))) { // <- eating Golden Apple + Chorus Fruit + Some ms leniency
             boolean finalStoppedBecauseTimer = stoppedBecauseTimer;
             phobot.getInventoryService().use(ctx -> {

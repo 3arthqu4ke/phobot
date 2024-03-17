@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
 import me.earth.phobot.damagecalc.CrystalPosition;
 import me.earth.phobot.ducks.IEntity;
+import me.earth.phobot.event.RenderEvent;
 import me.earth.phobot.modules.BlockPlacingModule;
 import me.earth.phobot.modules.combat.autocrystal.AutoCrystal;
 import me.earth.phobot.modules.combat.autocrystal.CrystalPlacingModule;
@@ -17,6 +18,8 @@ import me.earth.phobot.util.math.PositionUtil;
 import me.earth.phobot.util.math.RaytraceUtil;
 import me.earth.phobot.util.math.RotationUtil;
 import me.earth.phobot.util.mutables.MutPos;
+import me.earth.phobot.util.render.Renderer;
+import me.earth.phobot.util.time.StopWatch;
 import me.earth.phobot.util.time.TimeUtil;
 import me.earth.phobot.util.world.BlockStateLevel;
 import me.earth.pingbypass.api.event.SafeListener;
@@ -36,6 +39,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.PickaxeItem;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import org.apache.commons.lang3.mutable.MutableObject;
@@ -60,6 +65,9 @@ import java.util.function.Consumer;
 @Slf4j
 public class Bomber extends BlockPlacingModule {
     private final Setting<Boolean> packetRotations = bool("PacketRotations", false, "Uses packet rotations to place crystals if you are safe.");
+    private final Setting<Integer> prePlace = number("PrePlace", 0, 0, 1_000, "If not 0, places this time in ms before you break the block, " +
+            "if you are not holding a crystal or a pickaxe, because in that case you have to make too many switches.");
+    private final Setting<Boolean> breakWhenPlaced = bool("BreakWhenPlaced", false, "Breaks the block just after we have placed a crystal.");
     private final PositionsThatBlowUpDrops positions = new PositionsThatBlowUpDrops();
     private final SurroundService surroundService;
     @Getter
@@ -67,9 +75,15 @@ public class Bomber extends BlockPlacingModule {
     private final Speedmine speedmine;
     private final AutoTrap autoTrap;
 
+    @Getter
+    private final StopWatch.ForMultipleThreads lastBombing = new StopWatch.ForMultipleThreads();
+    private final StopWatch.ForSingleThread lastPrePlace = new StopWatch.ForSingleThread();
+
+    private BlockPos renderPos = null;
     private volatile BlockPos currentSpeedminePos;
     private volatile BlockPos currentCrystalPos;
     private volatile long time;
+    private boolean prePlaced;
 
     public Bomber(Phobot phobot, Speedmine speedmine, AutoCrystal autoCrystal, AutoTrap autoTrap, SurroundService surroundService) {
         super(phobot, phobot.getBlockPlacer(), "Bomber", Categories.COMBAT, "Place End Crystals when mining blocks.", autoCrystal.getPriority());
@@ -93,31 +107,33 @@ public class Bomber extends BlockPlacingModule {
                 BlockStateLevel.Delegating level = new BlockStateLevel.Delegating(event.getLevel());
                 CrystalPosition crystal = findCrystalThatBlowsUpDrop(positions, event.getPos(), level, event.getPlayer());
                 Entity crystalEntity;
+                // breaks crystal if it already exists
                 if (crystal != null && (crystalEntity = crystal.getCrystals()[0]) != null) {
                     phobot.getInventoryService().use(context -> {
                         if (breakBlock(context, event.getPos(), event.getPlayer(), event.getLevel(), event.getGameMode())) {
                             rotateForAttacking(event.getPlayer(), crystalEntity);
                             phobot.getAttackService().attack(event.getPlayer(), crystalEntity);
-                            CrystalPosition surroundBlockingPos = findPositionToBlockSurround(positions, event.getPos(), level, event.getPlayer());
-                            if (surroundBlockingPos != null) {
-                                autoCrystal.placer().placeAction(context, event.getPlayer(), level, surroundBlockingPos, canUsePacketRotations());
+
+                            Integer targetId = crystal.getTargetId();
+                            if (targetId != null) {
+                                Entity targetEntity = level.getEntity(targetId);
+                                if (targetEntity != null && targetEntity.getEyeY() >= crystalEntity.getY()) {
+                                    CrystalPosition surroundBlockingPos = findPositionToBlockSurround(positions, event.getPos(), level, event.getPlayer());
+                                    if (surroundBlockingPos != null) {
+                                        autoCrystal.placer().placeAction(context, event.getPlayer(), level, surroundBlockingPos, canUsePacketRotations());
+                                    }
+                                }
                             }
+
+                            lastBombing.reset();
                         }
                     });
 
+                    prePlaced = false;
                     event.setCancelled(true);
-                } else {
-                    CrystalPosition blowsUpDrop = findBestPositionToBlowUpDrop(positions, event.getPos(), level, event.getPlayer());
-                    CrystalPosition blocksSurround = findPositionToBlockSurround(positions, event.getPos(), level, event.getPlayer());
-                    if (isValid(blowsUpDrop, blocksSurround, null) && blowsUpDrop != null) {
-                        currentCrystalPos = blowsUpDrop.immutable();
-                        currentSpeedminePos = event.getPos();
-                        time = TimeUtil.getMillis();
-                        phobot.getInventoryService().use(context -> {
-                            autoCrystal.placer().placeAction(context, event.getPlayer(), level, blowsUpDrop, canUsePacketRotations());
-                            autoCrystal.blockBlackList().put(blowsUpDrop.immutable(), TimeUtil.getMillis());
-                        });
-
+                } else if (place(event.getPos(), level, event.getPlayer(), true)) { // spawn crystal and wait until ClientboundAddEntityPacket to break it and the block
+                    prePlaced = false;
+                    if (!breakWhenPlaced.getValue()) {
                         event.setCancelled(true);
                     }
                 }
@@ -162,6 +178,7 @@ public class Bomber extends BlockPlacingModule {
                             CrystalPosition surroundBlockingPos = findPositionToBlockSurround(positions, currentSpeedminePos, customBlockStateLevel, player);
                             if (surroundBlockingPos != null && surroundBlockingPos.getDamage() >= autoCrystal.minDamage().getValue()) {
                                 autoCrystal.placer().placeAction(context, player, level, surroundBlockingPos, canUsePacketRotations());
+                                lastBombing.reset();
                             } else {
                                 // TODO: could update AutoTrap here?
                                 autoTrap.getBlackList().remove(currentSpeedminePos);
@@ -176,19 +193,77 @@ public class Bomber extends BlockPlacingModule {
             }
         });
 
+        listen(new Listener<RenderEvent>() {
+            @Override
+            public void onEvent(RenderEvent event) {
+                BlockPos pos = renderPos;
+                if (pos != null) {
+                    event.getAabb().set(pos);
+                    event.setBoxColor(1.0f, 1.0f, 1.0f, 1.0f, 0.4f);
+                    Renderer.renderBoxWithOutlineAndSides(event, 1.5f, true);
+                }
+            }
+        });
+
         ResetUtil.onRespawnOrWorldChange(this, mc, this::reset);
     }
 
     @Override
-    protected void updatePlacements(InventoryContext context, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
-        if (!autoCrystal.isEnabled() && autoCrystal.obbyPos() != null) {
-            autoCrystal.updatePlacements(context, player, level, gameMode);
+    protected void updatePlacements(InventoryContext context, LocalPlayer player, ClientLevel clientLevel, MultiPlayerGameMode gameMode) {
+        if (lastBombing.passed(250L)) {
+            renderPos = null;
         }
+
+        BlockPos currentPos;
+        if (prePlace.getValue() != 0
+                && (!prePlaced || lastPrePlace.passed(1_000L))
+                && !player.isHolding(stack -> stack.getItem() instanceof PickaxeItem)
+                && !player.isHolding(Items.END_CRYSTAL)
+                && (currentPos = speedmine.getCurrentPos()) != null
+                && !clientLevel.getBlockState(currentPos).isAir()
+                && speedmine.getTimeLeftMS(player, clientLevel) <= prePlace.getValue()) {
+            BlockStateLevel.Delegating level = new BlockStateLevel.Delegating(clientLevel);
+            CrystalPosition crystal = findCrystalThatBlowsUpDrop(positions, currentPos, level, player);
+            if (crystal == null || crystal.getCrystals()[0] == null) {
+                place(currentPos, level, player, false);
+                lastPrePlace.reset();
+                prePlaced = true;
+            }
+        }
+
+        if (!autoCrystal.isEnabled() && autoCrystal.obbyPos() != null) {
+            autoCrystal.updatePlacements(context, player, clientLevel, gameMode);
+        }
+    }
+
+    private boolean place(BlockPos pos, BlockStateLevel.Delegating level, LocalPlayer player, boolean setCrystalPos) {
+        CrystalPosition blowsUpDrop = findBestPositionToBlowUpDrop(positions, pos, level, player);
+        CrystalPosition blocksSurround = findPositionToBlockSurround(positions, pos, level, player);
+        if (isValid(blowsUpDrop, blocksSurround, null) && blowsUpDrop != null) {
+            BlockPos immutable = blowsUpDrop.immutable();
+            if (setCrystalPos) {
+                currentCrystalPos = immutable;
+            }
+
+            currentSpeedminePos = pos;
+            time = TimeUtil.getMillis();
+            phobot.getInventoryService().use(context -> {
+                autoCrystal.placer().placeAction(context, player, level.getLevel(), blowsUpDrop.copy(), canUsePacketRotations());
+                renderPos = immutable;
+                autoCrystal.blockBlackList().put(immutable, TimeUtil.getMillis());
+            });
+
+            lastBombing.reset();
+            return true;
+        }
+
+        return false;
     }
 
     public void reset() {
         currentSpeedminePos = null;
         currentCrystalPos = null;
+        prePlaced = false;
         time = 0L;
     }
 
@@ -230,6 +305,7 @@ public class Bomber extends BlockPlacingModule {
         return blocksSurround.getDamage() >= autoCrystal.minDamage().getValue() || blowsUpDrop != null && blowsUpDrop.getDamage() >= autoCrystal.minDamage().getValue();
     }
 
+    // TODO: currently this also tries to blow up the drop if the target block is not a surround block
     public @Nullable CrystalPosition findCrystalThatBlowsUpDrop(PositionsThatBlowUpDrops positions, BlockPos pos, BlockStateLevel.Delegating level, LocalPlayer player) {
         level.getMap().clear();
         level.getMap().put(pos, Blocks.AIR.defaultBlockState());
@@ -333,6 +409,7 @@ public class Bomber extends BlockPlacingModule {
                     }
 
                     position.setDamageIfHigher(damage);
+                    position.setTargetId(enemy.getId());
                 }
             }
 
