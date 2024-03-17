@@ -1,16 +1,17 @@
 package me.earth.phobot.bot.behaviours;
 
 import lombok.Getter;
+import lombok.Setter;
 import me.earth.phobot.bot.Bot;
 import me.earth.phobot.modules.combat.KillAura;
 import me.earth.phobot.util.ResetUtil;
 import me.earth.phobot.util.entity.EntityUtil;
+import me.earth.phobot.util.player.FakePlayer;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.player.RemotePlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,16 +19,13 @@ import org.jetbrains.annotations.Nullable;
  * Finds targets for our bot.
  */
 @Getter
+@Setter
 public class Targeting extends Behaviour {
     private Entity target;
-    private Entity lastTarget;
 
     public Targeting(Bot bot) {
         super(bot, PRIORITY_TARGET);
-        ResetUtil.onRespawnOrWorldChange(this, mc, () -> {
-            target = null;
-            lastTarget = null;
-        });
+        ResetUtil.onRespawnOrWorldChange(this, mc, () -> target = null);
     }
 
     @Override
@@ -36,23 +34,22 @@ public class Targeting extends Behaviour {
             return;
         }
 
-        lastTarget = target;
-        if (lastTarget != null && lastTarget.isRemoved() || lastTarget instanceof LivingEntity livingEntity &&  EntityUtil.isDead(livingEntity)) {
-            lastTarget = null;
+        Entity lastTarget = target;
+        if (isInvalid(lastTarget)) {
+            target = null;
+        } else {
+            return;
         }
 
         Entity target = bot.getModules().getAutoCrystal().getTarget();
-        if (target == null) {
+        if (isInvalid(target)) {
             KillAura.Target killAuraTarget = bot.getModules().getKillAura().getTarget();
-            if (killAuraTarget != null) {
+            if (killAuraTarget != null && !isInvalid(killAuraTarget.entity())) {
                 target = killAuraTarget.entity();
             } else {
-                target = lastTarget;
+                target = findTarget(player, level, true);
                 if (target == null) {
-                    target = findTarget(player, level, true);
-                    if (target == null) {
-                        target = findTarget(player, level, false);
-                    }
+                    target = findTarget(player, level, false);
                 }
             }
         }
@@ -60,19 +57,18 @@ public class Targeting extends Behaviour {
         this.target = target;
     }
 
-    private @Nullable Entity findTarget(LocalPlayer player, ClientLevel level, boolean enemy) {
+    private @Nullable Entity findTarget(LocalPlayer localPlayer, ClientLevel level, boolean enemy) {
         Entity result = null;
         double closestDistance = Double.MAX_VALUE;
         for (Player entity : level.players()) {
-        if (!(entity instanceof RemotePlayer)
-                || player == entity
-                || pingBypass.getFriendManager().contains(player.getUUID())
-                || enemy && !pingBypass.getEnemyManager().contains(player.getUUID())
-                || entity.getY() > bot.getSpawnHeight().getValue() + 10.0/* some leniency if they jump*/) {
+            if (!(entity instanceof RemotePlayer || entity instanceof FakePlayer)
+                    || pingBypass.getFriendManager().contains(entity.getUUID())
+                    || enemy && !pingBypass.getEnemyManager().contains(entity.getUUID())
+                    || entity.getY() > bot.getSpawnHeight().getValue() + 10.0/* some leniency if they jump*/) {
                 continue;
             }
             // TODO: make this great
-            double distance = player.distanceToSqr(entity);
+            double distance = localPlayer.distanceToSqr(entity);
             if (result == null || closestDistance > distance) {
                 result = entity;
                 closestDistance = distance;
@@ -80,6 +76,10 @@ public class Targeting extends Behaviour {
         }
 
         return result;
+    }
+
+    private boolean isInvalid(@Nullable Entity target) {
+        return target == null || EntityUtil.isDeadOrRemoved(target);
     }
 
 }

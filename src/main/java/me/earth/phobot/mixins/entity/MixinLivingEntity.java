@@ -29,7 +29,7 @@ public abstract class MixinLivingEntity implements ITotemPoppingEntity, IDamageP
     private void maxUpStepHook(CallbackInfoReturnable<Float> cir) {
         //noinspection ConstantValue
         if (LocalPlayer.class.isInstance(this)) {
-            StepHeightEvent event = new StepHeightEvent(LivingEntity.class.cast(this), cir.getReturnValueF());
+            StepHeightEvent event = new StepHeightEvent(LocalPlayer.class.cast(this), cir.getReturnValueF());
             PingBypassApi.getEventBus().post(event);
             if (event.isCancelled()) {
                 cir.setReturnValue(event.getHeight());

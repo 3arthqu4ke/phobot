@@ -40,7 +40,7 @@ public class AutoEat extends PhobotModule {
                     gameMode.releaseUsingItem(player);
                 }
 
-                if (player.getUseItem().is(Items.ENCHANTED_GOLDEN_APPLE)) {
+                if (!player.getUseItem().isEmpty() && player.isUsingItem()) {
                     event.setCancelled(true);
                     return;
                 }

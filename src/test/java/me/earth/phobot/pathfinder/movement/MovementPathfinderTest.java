@@ -1,133 +1,172 @@
 package me.earth.phobot.pathfinder.movement;
 
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import me.earth.phobot.BlockableEventLoopImpl;
+import me.earth.phobot.DelegatingPingBypass;
 import me.earth.phobot.TestPhobot;
 import me.earth.phobot.TestUtil;
-import me.earth.phobot.pathfinder.Path;
+import me.earth.phobot.event.MoveEvent;
+import me.earth.phobot.event.PathfinderUpdateEvent;
+import me.earth.phobot.movement.BunnyHopCC;
+import me.earth.phobot.movement.NoStepMovement;
 import me.earth.phobot.pathfinder.algorithm.AStarTest;
 import me.earth.phobot.pathfinder.algorithm.Algorithm;
 import me.earth.phobot.pathfinder.mesh.MeshNode;
 import me.earth.phobot.pathfinder.mesh.NavigationMeshManagerTest;
-import me.earth.phobot.pathfinder.util.Cancellation;
 import me.earth.phobot.util.player.MovementPlayer;
+import me.earth.pingbypass.PingBypass;
+import me.earth.pingbypass.TestPingBypass;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.junit.jupiter.api.Assertions.*;
+
+@Slf4j
 public class MovementPathfinderTest {
     @Test
     @SneakyThrows
-    public void testMovementPathfinder() {
-        try (ClientLevel clientLevel = TestUtil.createClientLevel()) {
-            var level = NavigationMeshManagerTest.setupLevel(clientLevel);
-            var player = new MovementPlayer(level);
-            var meshManager = NavigationMeshManagerTest.createNavigationMeshManager();
-            NavigationMeshManagerTest.setupMesh(level, meshManager);
-            var meshNodePath = AStarTest.findPath(meshManager, new BlockPos(10, 1, 10), new BlockPos(0, 3, 0));
-            assertNotNull(meshNodePath);
-            var path = new Path<>(new Vec3(10.5, 1, 10.5), new Vec3(0.5, 3, 0.5), new BlockPos(10, 1, 10), new BlockPos(0, 3, 0),
-                    meshNodePath.order(Algorithm.Result.Order.START_TO_GOAL).getPath(), MeshNode.class);
-            MovementPathfindingAlgorithm algorithm = new MovementPathfindingAlgorithm(TestPhobot.PHOBOT, level, path, player, null, null);
-            var movementNodePath = algorithm.run(new Cancellation.ThreadInterrupted());
-            assertNotNull(movementNodePath);
-            assertTrue(movementNodePath.getPath().size() > 2);
-            assertTrue(algorithm.getStart().positionEquals(movementNodePath.getPath().get(0)));
-            assertTrue(movementNodePath.getPath().get(0).isStart());
-            assertTrue(algorithm.getGoal().positionEquals(movementNodePath.getPath().get(movementNodePath.getPath().size() - 1)));
-            assertTrue(movementNodePath.getPath().get(movementNodePath.getPath().size() - 1).isGoal());
-        }
-    }
-
-    @Test
-    @SneakyThrows
-    public void testMovementPathfinderOnCCSpawn() {
+    public void testMovementPathfinderFallingDown() {
         try (ClientLevel clientLevel = TestUtil.createClientLevel()) {
             var level = TestUtil.setupLevelFromJson(clientLevel, "worlds/CCWinterSpawn.json");
             var player = new MovementPlayer(level);
+            player.setOnGround(true);
+            player.verticalCollision = true;
+            player.verticalCollisionBelow = true;
+            player.setDeltaMovement(new Vec3(0.0, NoStepMovement.INSTANCE.getDeltaYOnGround(), 0.0));
             player.setPos(0.0, 131.0, 0.0);
+            player.setMovement(new BunnyHopCC());
             var meshManager = NavigationMeshManagerTest.createNavigationMeshManager();
             NavigationMeshManagerTest.setupMesh(level, 141, meshManager);
             var meshNodePath = AStarTest.findPath(meshManager, new BlockPos(0, 131, 0), new BlockPos(4, 5, 5));
             assertNotNull(meshNodePath);
-            var path = new Path<>(new Vec3(0.0, 131.0, 0.0), new Vec3(4.5, 5.0, 5.5), new BlockPos(0, 131, 0), new BlockPos(4, 5, 5),
-                    meshNodePath.order(Algorithm.Result.Order.START_TO_GOAL).getPath(), MeshNode.class);
-            MovementPathfindingAlgorithm algorithm = new MovementPathfindingAlgorithm(TestPhobot.PHOBOT, level, path, player, null, null);
-            var movementNodePath = algorithm.run(new Cancellation.ThreadInterrupted());
-            assertNotNull(movementNodePath);
+            var mc = TestUtil.createMinecraft(level);
+            var pingBypass = new DelegatingPingBypass.WithMc(new TestPingBypass(), mc);
+            var movementPathfinder = new MovementPathfinder(pingBypass) {
+                @Override
+                protected Player getPlayer(Player localPlayer) {
+                    return player;
+                }
+            };
+
+            pingBypass.getEventBus().subscribe(movementPathfinder);
+            var phobot = TestPhobot.createNewTestPhobot();
+            CompletableFuture<MovementPathfinder.Result> future = movementPathfinder.followScheduled(
+                    phobot, new BlockableEventLoopImpl(), (action, orElse) -> action.accept(mc.player, mc.level, mc.gameMode), meshNodePath, new Vec3(4.5, 5.0, 5.5));
+            assertTrue(movementPathfinder.isFollowingPath());
+
+            updatePlayerForTicks(10_000, player, pingBypass, movementPathfinder);
+
+            var result = future.getNow(null);
+            assertEquals(MovementPathfinder.Result.FINISHED, result);
+            assertEquals(new Vec3(4.5, 5.0, 5.5), player.position());
         }
     }
 
+    /**
+     * We had a big problem with "hot swapping" paths for the {@link MovementPathfinder}.
+     * This means that we might be following a MeshNode path with our Pathfinder while concurrently
+     * starting an A-Star Algorithm to calculate a path from the MeshNode our player is currently on to somewhere else.
+     * The problem arises when the A-Star Algorithm finishes, and we want to follow its result path:
+     * We have since then moved further with the MovementPathfinder and are out of range of the initial starting MeshNode.
+     * This test covers the simplest case, we are falling down from spawn, and are pathfinding from the MeshNode we are going to land on,
+     * then change paths mid-fall.
+     */
     @Test
     @SneakyThrows
-    public void testSinglePlayerWorld1GettingStuckWhenFallingWithFastFall() {
+    public void testMovementPathfinderHotSwapping() {
         try (ClientLevel clientLevel = TestUtil.createClientLevel()) {
-            var level = TestUtil.setupLevelFromJson(clientLevel, "worlds/SinglePlayer1.json");
+            var level = TestUtil.setupLevelFromJson(clientLevel, "worlds/CCWinterSpawn.json");
             var player = new MovementPlayer(level);
-            player.setPos(0.5, 1.0, 0.5);
-            var meshManager = NavigationMeshManagerTest.createNavigationMeshManager(-12);
-            NavigationMeshManagerTest.setupMesh(level, -12, 12, meshManager);
-            var meshNodePath = AStarTest.findPath(meshManager, new BlockPos(0, 1, 0), new BlockPos(-4, -6, 1));
-            assertNotNull(meshNodePath);
-            var path = new Path<>(new Vec3(0.5, 1.0, 0.5), new Vec3(-4, -6, 1), new BlockPos(0, 1, 0), new BlockPos(-4, -6, 1),
-                    meshNodePath.order(Algorithm.Result.Order.START_TO_GOAL).getPath(), MeshNode.class);
-            MovementPathfindingAlgorithm algorithm = new MovementPathfindingAlgorithm(TestPhobot.PHOBOT, level, path, player, null, null);
-            var movementNodePath = algorithm.run(new Cancellation.ThreadInterrupted());
-            assertNotNull(movementNodePath);
-        }
-    }
-
-    @Test
-    @SneakyThrows
-    public void testFallDownNarrowHole() {
-        /* A problem, funnily for players too, is getting into 1x1 holes, if you are too fast you might just walk over it
-           The world to test looks something like this (s == start, g == goal):
-
-           x x x   x x x x x x s
-               x   x
-               x g x
-               x x x
-         */
-        try (ClientLevel clientLevel = TestUtil.createClientLevel()) {
-            var level = TestUtil.setupLevelFromJson(clientLevel, "worlds/FallDownNarrowHole.json");
-            var player = new MovementPlayer(level);
-            player.setPos(0.5, 1.0, 0.5);
-            var meshManager = NavigationMeshManagerTest.createNavigationMeshManager(-12);
-            NavigationMeshManagerTest.setupMesh(level, -12, 12, meshManager);
-            var meshNodePath = AStarTest.findPath(meshManager, new BlockPos(0, 1, 0), new BlockPos(0, -3, 8));
-            assertNotNull(meshNodePath);
-            var path = new Path<>(new Vec3(0.5, 1.0, 0.5), new Vec3(0.5, -3.0, 8.5), new BlockPos(0, 1, 0), new BlockPos(0, -3, 8),
-                    meshNodePath.order(Algorithm.Result.Order.START_TO_GOAL).getPath(), MeshNode.class);
-            MovementPathfindingAlgorithm algorithm = new MovementPathfindingAlgorithm(TestPhobot.PHOBOT, level, path, player, null, null);
-            var movementNodePath = algorithm.run(new Cancellation.ThreadInterrupted());
-            assertNotNull(movementNodePath);
-        }
-    }
-
-    @Test
-    @SneakyThrows
-    public void testFallDownNarrowHoleVeryCloseToEdge() {
-        // the same, as above, just now we are sitting right at the edge
-        try (ClientLevel clientLevel = TestUtil.createClientLevel()) {
-            var level = TestUtil.setupLevelFromJson(clientLevel, "worlds/FallDownNarrowHole.json");
-            var player = new MovementPlayer(level);
-            player.setPos(0.5, 1.0, 8.3); // we can stand exactly 0.3 units over the edge here
+            player.setOnGround(true);
             player.verticalCollision = true;
             player.verticalCollisionBelow = true;
-            player.setOnGround(true);
-            var meshManager = NavigationMeshManagerTest.createNavigationMeshManager(-12);
-            NavigationMeshManagerTest.setupMesh(level, -12, 12, meshManager);
-            var meshNodePath = AStarTest.findPath(meshManager, new BlockPos(0, 1, 7), new BlockPos(0, -3, 8));
+            player.setDeltaMovement(new Vec3(0.0, NoStepMovement.INSTANCE.getDeltaYOnGround(), 0.0));
+            player.setPos(0.0, 131.0, 0.0);
+            player.setMovement(new BunnyHopCC());
+            var meshManager = NavigationMeshManagerTest.createNavigationMeshManager();
+            NavigationMeshManagerTest.setupMesh(level, 141, meshManager);
+            var meshNodePath = AStarTest.findPath(meshManager, new BlockPos(0, 131, 0), new BlockPos(4, 5, 5));
             assertNotNull(meshNodePath);
-            var path = new Path<>(new Vec3(0.5, 1.0, 8.3), new Vec3(0.5, -3.0, 8.5), new BlockPos(0, 1, 7), new BlockPos(0, -4, 8),
-                                  meshNodePath.order(Algorithm.Result.Order.START_TO_GOAL).getPath(), MeshNode.class);
-            MovementPathfindingAlgorithm algorithm = new MovementPathfindingAlgorithm(TestPhobot.PHOBOT, level, path, player, null, null);
-            var movementNodePath = algorithm.run(new Cancellation.ThreadInterrupted());
-            // TODO: seems to strafe back?
-            assertNotNull(movementNodePath);
+            var mc = TestUtil.createMinecraft(level);
+            var pingBypass = new DelegatingPingBypass.WithMc(new TestPingBypass(), mc);
+            var movementPathfinder = new MovementPathfinder(pingBypass) {
+                @Override
+                protected Player getPlayer(Player localPlayer) {
+                    return player;
+                }
+            };
+
+            pingBypass.getEventBus().subscribe(movementPathfinder);
+            var phobot = TestPhobot.createNewTestPhobot();
+            CompletableFuture<MovementPathfinder.Result> future = movementPathfinder.followScheduled(
+                    phobot, new BlockableEventLoopImpl(), (action, orElse) -> action.accept(mc.player, mc.level, mc.gameMode), meshNodePath, new Vec3(4.5, 5.0, 5.5));
+            assertTrue(movementPathfinder.isFollowingPath());
+
+            Algorithm.Result<MeshNode> newPath = null;
+            boolean followingNewPath = false;
+            for (int i = 0; i < 10_000; i++) {
+                AtomicBoolean called = new AtomicBoolean();
+                player.setMoveCallback(delta -> {
+                    var moveEvent = new MoveEvent(Vec3.ZERO);
+                    pingBypass.getEventBus().post(moveEvent);
+                    called.set(true);
+                    return moveEvent.getVec();
+                });
+
+                player.aiTravel();
+                assertTrue(called.get());
+                pingBypass.getEventBus().post(new PathfinderUpdateEvent());
+                if (player.getY() <= 40.0 && !followingNewPath) { // trigger at y "AStar has finished"
+                    followingNewPath = true;
+                    assertNotNull(newPath);
+                    CompletableFuture<MovementPathfinder.Result> newFuture = movementPathfinder.followScheduled(
+                            phobot, new BlockableEventLoopImpl(), (action, orElse) -> action.accept(mc.player, mc.level, mc.gameMode), meshNodePath, new Vec3(4.5, 5.0, 5.5));
+                    var result = future.getNow(null);
+                    assertNotNull(result);
+                    assertEquals(MovementPathfinder.Result.NEW_PATH, result);
+                    future = newFuture;
+                }
+
+                if (player.getY() <= 57.0 && newPath == null) { // start calculating at y 57, which is build height, bot behaviour "Chasing" has found path
+                    newPath = AStarTest.findPath(meshManager, meshManager.getStartNode(player).map(MeshNode::asBlockPos).orElseThrow(), new BlockPos(4, 5, 5));
+                }
+
+                if (!movementPathfinder.isFollowingPath()) {
+                    break;
+                }
+            }
+
+            var result = future.getNow(null);
+            assertEquals(MovementPathfinder.Result.FINISHED, result);
+            assertEquals(new Vec3(4.5, 5.0, 5.5), player.position());
+        }
+    }
+
+    public static void updatePlayerForTicks(int ticks, MovementPlayer player, PingBypass pingBypass, MovementPathfinder movementPathfinder) {
+        for (int i = 0; i < ticks; i++) {
+            AtomicBoolean called = new AtomicBoolean();
+            player.setMoveCallback(delta -> {
+                var moveEvent = new MoveEvent(delta);
+                pingBypass.getEventBus().post(moveEvent);
+                called.set(true);
+                return moveEvent.getVec();
+            });
+
+            // TODO: stuckSpeedMultiplier?
+            // TODO: set player speed! this.setSpeed((float)this.getAttributeValue(Attributes.MOVEMENT_SPEED));
+            player.aiTravel();
+            assertTrue(called.get());
+            pingBypass.getEventBus().post(new PathfinderUpdateEvent());
+            if (!movementPathfinder.isFollowingPath()) {
+                break;
+            }
         }
     }
 

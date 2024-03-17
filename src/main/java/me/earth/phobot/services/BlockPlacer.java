@@ -23,11 +23,10 @@ import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.protocol.game.ServerboundInteractPacket;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
-import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
@@ -53,6 +52,7 @@ public class BlockPlacer extends SubscriberImpl {
     private final List<Action> actions = new ArrayList<>();
     private final LocalPlayerPositionService localPlayerPositionService;
     private final MotionUpdateService motionUpdateService;
+    private final AttackService attackService;
     private final AntiCheat antiCheat;
     private final Minecraft minecraft;
 
@@ -64,11 +64,13 @@ public class BlockPlacer extends SubscriberImpl {
     private boolean completed = false;
     private volatile boolean inTick = false;
 
-    public BlockPlacer(LocalPlayerPositionService localPlayerPositionService, MotionUpdateService motionUpdateService, InventoryService inventoryService, Minecraft minecraft, AntiCheat antiCheat) {
+    public BlockPlacer(LocalPlayerPositionService localPlayerPositionService, MotionUpdateService motionUpdateService, InventoryService inventoryService, Minecraft minecraft,
+                       AntiCheat antiCheat, AttackService attackService) {
         this.localPlayerPositionService = localPlayerPositionService;
         this.motionUpdateService = motionUpdateService;
         this.antiCheat = antiCheat;
         this.minecraft = minecraft;
+        this.attackService = attackService;
         listen(new SafeListener<PreMotionPlayerUpdateEvent>(minecraft, -PRIORITY) {
             @Override
             public void onEvent(PreMotionPlayerUpdateEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
@@ -116,11 +118,10 @@ public class BlockPlacer extends SubscriberImpl {
 
     // TODO: this needs rotations!
     public void breakCrystal(LocalPlayer player) {
+        Entity crystal = this.crystal;
         if (crystal != null && !attacked) {
-            // TODO: use attacking service with InventoryContext!!!!
             // TODO: only break crystal if the action is actually going to be executed
-            player.connection.send(ServerboundInteractPacket.createAttackPacket(crystal, false));
-            player.swing(InteractionHand.MAIN_HAND);
+            attackService.attack(player, crystal);
             attacked = true;
         }
     }

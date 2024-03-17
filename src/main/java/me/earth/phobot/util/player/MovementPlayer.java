@@ -11,6 +11,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.Block;
@@ -40,6 +41,25 @@ public class MovementPlayer extends FakePlayer {
 
     public MovementPlayer(ClientLevel clientLevel, GameProfile gameProfile) {
         super(clientLevel, gameProfile);
+    }
+
+    /**
+     * Basically makes it so that we just always look straight forward.
+     *
+     * @param amount the speed we are moving with.
+     * @param relative the direction we are moving into, (xxa, zza)
+     */
+    @Override
+    public void moveRelative(float amount, Vec3 relative) {
+        Vec3 inputVector;
+        double lengthSqr = relative.lengthSqr();
+        if (lengthSqr < Shapes.EPSILON) {
+            inputVector = Vec3.ZERO;
+        } else {
+            inputVector = (lengthSqr > 1.0 ? relative.normalize() : relative).scale(amount);
+        }
+
+        this.setDeltaMovement(this.getDeltaMovement().add(inputVector));
     }
 
     @Override
@@ -145,15 +165,41 @@ public class MovementPlayer extends FakePlayer {
     }
 
     /**
-     * @see net.minecraft.world.entity.LivingEntity#travel(Vec3)
+     * @see LivingEntity#aiStep()
+     * @see LivingEntity#travel(Vec3)
      */
-    public void travel() {
-        travel(getDeltaMovement());
+    public void aiTravel() {
+        // see LivingEntity.aiStep
+        Vec3 delta = this.getDeltaMovement();
+        double x = delta.x;
+        double y = delta.y;
+        double z = delta.z;
+        if (Math.abs(delta.x) < 0.003) {
+            x = 0.0;
+        }
+
+        if (Math.abs(delta.y) < 0.003) {
+            y = 0.0;
+        }
+
+        if (Math.abs(delta.z) < 0.003) {
+            z = 0.0;
+        }
+
+        this.setDeltaMovement(x, y, z);
+        if (this.hasEffect(MobEffects.SLOW_FALLING) || this.hasEffect(MobEffects.LEVITATION)) {
+            this.resetFallDistance();
+        }
+
+        this.xxa *= 0.98F;
+        this.zza *= 0.98F;
+        Vec3 travelDelta = new Vec3(this.xxa, this.yya, this.zza);
+        travel(travelDelta);
     }
 
     // TODO: swimming, elytra flying, basically LivingEntity.travel(Vec3)
     /**
-     * @param delta the delta movement to move with.
+     * @param delta travel delta, {@link #xxa} and {@link #zza}
      * @see net.minecraft.world.entity.LivingEntity#travel(Vec3)
      */
     @Override
@@ -164,6 +210,10 @@ public class MovementPlayer extends FakePlayer {
         if (falling && this.hasEffect(MobEffects.SLOW_FALLING)) {
             gravity = 0.01;
         }
+
+        // this is where I'd put my FluidState travel
+        // this is where I'd put my lava travel
+        // this is where I'd put my Elytra travel
 
         BlockPos pos = this.getBlockPosBelowThatAffectsMyMovement();
         float friction = this.level().getBlockState(pos).getBlock().getFriction();

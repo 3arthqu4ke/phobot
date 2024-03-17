@@ -18,7 +18,7 @@ public class Step extends PhobotModule {
         listen(new Listener<StepHeightEvent>() {
             @Override
             public void onEvent(StepHeightEvent event) {
-                if (phobot.getMovementService().getMovement().canStep(event.getEntity())) {
+                if (phobot.getMovementService().getMovement().canStep(event.getPlayer())) {
                     event.setHeight(phobot.getMovementService().getMovement().getStepHeight());
                 }
             }

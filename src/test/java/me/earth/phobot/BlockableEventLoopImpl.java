@@ -24,4 +24,9 @@ public class BlockableEventLoopImpl extends ReentrantBlockableEventLoop<Runnable
         return true;
     }
 
+    @Override
+    public void runAllTasks() { // make public
+        super.runAllTasks();
+    }
+
 }

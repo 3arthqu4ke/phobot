@@ -24,7 +24,7 @@ public class BlockPathfinderAlgorithm extends Dijkstra<BlockNode> {
     protected void evaluate(BlockNode current, BlockNode neighbour) {
         double tentative_gScore = gScore.getOrDefault(current, Double.POSITIVE_INFINITY) + getCost(current, neighbour);
         if (tentative_gScore < gScore.getOrDefault(neighbour, Double.POSITIVE_INFINITY) && tentative_gScore <= maxCost) {
-            add(current, neighbour, tentative_gScore);
+            addDijkstra(current, neighbour, tentative_gScore);
         }
     }
 

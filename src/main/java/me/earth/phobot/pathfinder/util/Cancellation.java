@@ -1,11 +1,13 @@
 package me.earth.phobot.pathfinder.util;
 
 import lombok.Setter;
+import lombok.ToString;
 
 /**
  * Represents the cancellation of some ongoing task.
  */
 @Setter
+@ToString
 @SuppressWarnings("LombokGetterMayBeUsed")
 public class Cancellation {
     public static final Cancellation UNCANCELLABLE = new Cancellation() {
@@ -25,6 +27,7 @@ public class Cancellation {
         return cancelled;
     }
 
+    @ToString(callSuper = true)
     public static class ThreadInterrupted extends Cancellation {
         private Thread thread = Thread.currentThread();
 

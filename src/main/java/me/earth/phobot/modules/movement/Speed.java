@@ -41,6 +41,10 @@ public class Speed extends PhobotModule {
         listen(new SafeListener<TickEvent>(mc) {
             @Override
             public void onEvent(TickEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
+                if (phobot.getPathfinder().isFollowingPath()) {
+                    return;
+                }
+
                 if (!mc.options.keyUp.isDown() && !mc.options.keyDown.isDown() && !mc.options.keyLeft.isDown() && !mc.options.keyRight.isDown()) {
                     player.setDeltaMovement(0.0, player.getDeltaMovement().y, 0.0);
                 }

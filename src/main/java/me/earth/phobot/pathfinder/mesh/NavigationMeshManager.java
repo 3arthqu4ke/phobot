@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.invalidation.*;
 import me.earth.phobot.movement.Movement;
+import me.earth.phobot.pathfinder.algorithm.pooling.NodeParallelizationPooling;
 import me.earth.phobot.util.collections.XZMap;
 import me.earth.phobot.util.math.PositionUtil;
 import me.earth.phobot.util.mutables.MutPos;
@@ -11,6 +12,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -25,6 +27,9 @@ import java.util.*;
 @Slf4j
 @Getter
 public class NavigationMeshManager extends AbstractInvalidationManager<MeshNode, ConfigWithMinMaxHeight> {
+    public static final int PARALLELIZATION_POOL_SIZE = Integer.parseInt(System.getProperty("phobot.parallelization.pool.size", "16"));
+
+    private final NodeParallelizationPooling pooling;
     private final XZMap<Set<MeshNode>> xZMap;
     private final Movement movement;
 
@@ -32,6 +37,7 @@ public class NavigationMeshManager extends AbstractInvalidationManager<MeshNode,
         super(config, map);
         this.xZMap = xZMap;
         this.movement = movement;
+        this.pooling = new NodeParallelizationPooling(PARALLELIZATION_POOL_SIZE);
     }
 
     @Override
@@ -95,6 +101,17 @@ public class NavigationMeshManager extends AbstractInvalidationManager<MeshNode,
                 .flatMap(pos -> xZMap.getOrDefault(pos, Collections.emptySet()).stream())
                 .filter(meshNode -> meshNode.getY() <= player.getY() + 1)
                 .min(Comparator.comparingDouble(n -> n.distanceSqToCenter(player.getX(), player.getY(), player.getZ())));
+    }
+
+    public @Nullable MeshNode findFirst(Iterable<BlockPos> positions) {
+        for (BlockPos pos : positions) {
+            MeshNode meshNode = getMap().get(pos);
+            if (meshNode != null) {
+                return meshNode;
+            }
+        }
+
+        return null;
     }
 
 }

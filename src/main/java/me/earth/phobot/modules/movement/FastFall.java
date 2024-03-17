@@ -40,7 +40,7 @@ public class FastFall extends PhobotModule {
 
     public Vec3 getFastFallVec(Vec3 delta) {
         // cancel movement?
-        return new Vec3(delta.x(), Math.min(-speed.getValue(), delta.y), delta.y());
+        return new Vec3(delta.x() * 0.01, Math.min(-speed.getValue(), delta.y ), delta.z() * 0.01);
     }
 
     public boolean canFastFall(Player player, Vec3 delta, ClientLevel level, boolean speedIsOn) {
@@ -50,6 +50,7 @@ public class FastFall extends PhobotModule {
                 && !phobot.getMovementService().getMovement().shouldNotUseMovementHacks(player)
                 && player.fallDistance < 0.5
                 && player.getDeltaMovement().y < 0
+                && player.onGround()
                 && !isOnGroundAfterMove(player, delta, level)
                 && player.getY() - (nearestBlockBelow = getNearestBlockBelow(player, level)) > 0.625
                 && player.getY() - nearestBlockBelow <= speed.getValue();

@@ -6,10 +6,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
-import me.earth.phobot.event.LagbackEvent;
-import me.earth.phobot.event.MoveEvent;
-import me.earth.phobot.event.PathfinderUpdateEvent;
-import me.earth.phobot.event.RenderEvent;
+import me.earth.phobot.event.*;
 import me.earth.phobot.movement.BunnyHop;
 import me.earth.phobot.movement.Movement;
 import me.earth.phobot.pathfinder.Path;
@@ -35,12 +32,17 @@ import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.MoverType;
+import net.minecraft.util.Mth;
+import net.minecraft.util.thread.BlockableEventLoop;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 
-import java.util.function.Function;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 
 import static net.minecraft.ChatFormatting.RED;
 
@@ -54,6 +56,7 @@ import static net.minecraft.ChatFormatting.RED;
 public class MovementPathfinder extends SubscriberImpl {
     private final PathRenderer pathRenderer = new PathRenderer();
     private final StopWatch.ForSingleThread timer = new StopWatch.ForSingleThread();
+    private final PingBypass pingBypass;
     protected State state;
 
     public MovementPathfinder(PingBypass pingBypass) {
@@ -61,6 +64,7 @@ public class MovementPathfinder extends SubscriberImpl {
     }
 
     public MovementPathfinder(PingBypass pingBypass, boolean lag, boolean render) {
+        this.pingBypass = pingBypass;
         listen(new SafeListener<PathfinderUpdateEvent>(pingBypass.getMinecraft()) {
             @Override
             public void onEvent(PathfinderUpdateEvent event, LocalPlayer localPlayer, ClientLevel clientLevel, MultiPlayerGameMode multiPlayerGameMode) {
@@ -74,9 +78,9 @@ public class MovementPathfinder extends SubscriberImpl {
                     reset(Result.GET_PLAYER_FAILURE);
                     return;
                 }
-
+                // check if player has reached the MovementNode we set during the MoveEvent
                 handlePlayerDidNotReachPosition(current, player);
-                if (current.currentNode.isGoal()) {
+                if (current.currentNode.isGoal()) { // done!
                     player.setDeltaMovement(new Vec3(0.0, player.getDeltaMovement().y, 0.0));
                     reset(Result.FINISHED);
                     return;
@@ -121,7 +125,7 @@ public class MovementPathfinder extends SubscriberImpl {
                     return;
                 }
 
-                current.algorithm.updatePotionEffects(player.getActiveEffects());
+                current.algorithm.updatePlayer(player);
                 // TODO: also set FastFall!
                 // current.algorithm.setWalkOnly(!current.timeSinceLastLagBack.passed(1_000L) ? 3.0 : null);
                 if (current.timeSinceLastLagBack.passed(5_000)) {
@@ -133,25 +137,19 @@ public class MovementPathfinder extends SubscriberImpl {
 
                 current.laggedThisTick = false;
                 MovementNode next = current.currentNode.next();
-                Vec3 delta;
                 if (next != null) {
-                    delta = new Vec3(next.getX() - player.getX(), next.getY() - player.getY(), next.getZ() - player.getZ());
                     // Verify that since we calculated this MovementNode the world has not changed
                     // It could be that a new block has been placed, blocking our way to the next MovementNode
                     MovementPlayer movementPlayer = current.algorithm.getPlayer();
+                    movementPlayer.setSpeed((float) player.getAttributeValue(Attributes.MOVEMENT_SPEED));
                     // We do this by setting a player on the old node, then moving him to the next node
                     // If everything is ok, he will reach the target
                     current.currentNode.apply(movementPlayer);
-                    movementPlayer.setPos(player.position());
-                    movementPlayer.setMoveCallback(Function.identity());
-                    // TODO: this is wrong!, only set y component, but we need to decide which delta to keep!
-                    // TODO: also we need to call player.travel instead?!
-                    movementPlayer.setDeltaMovement(delta);
-                    movementPlayer.move(MoverType.SELF, movementPlayer.getDeltaMovement());
-                    // movementPlayer.travel();
+                    movementPlayer.setMoveCallback(next.getMoveEventDeltaFunction(movementPlayer));
+                    movementPlayer.aiTravel();
                     if (!next.positionEquals(movementPlayer.position())) {
                         // We were not able to get to the next MovementNode, reset next and calculate again
-                        log.error("Failed to verify next position: " + movementPlayer.position() + " vs " + next);
+                        log.error("Failed to verify next position: " + movementPlayer.position() + ", delta: " + movementPlayer.getDeltaMovement() + " vs " + next);
                         // current.currentNode.next(null);
                         current.resetToPlayer(player);
                         next = null;
@@ -159,6 +157,8 @@ public class MovementPathfinder extends SubscriberImpl {
                 }
 
                 if (next == null) {
+                    current.currentNode.next(null);
+                    current.algorithm.setCurrentMove(current.currentNode);
                     for (int i = 0; i < MovementPathfindingAlgorithm.NO_MOVE_THRESHOLD; i++) {
                         if (current.algorithm.update()) {
                             next = current.currentNode.next();
@@ -172,17 +172,22 @@ public class MovementPathfinder extends SubscriberImpl {
                     }
 
                     if (next == null) {
-                        pingBypass.getChat().send(Component.literal("Failed to find path to " + PositionUtil.toSimpleString(current.algorithm.getGoal())).withStyle(RED));
+                        logFailedPath("Failed to find path to " + PositionUtil.toSimpleString(current.algorithm.getGoal()));
                         reset(Result.FAILED);
                         return;
                     }
                 }
 
-                // delta = new Vec3(next.getX() - player.getX(), next.getY() - player.getY(), next.getZ() - player.getZ());
-                delta = new Vec3(next.state().getDelta().x, next.getY() - player.getY(), next.state().getDelta().z);
-                // TODO: this is wrong!, only set y component, but we need to decide which deltaX and Z to keep?
-                player.setDeltaMovement(delta);
-                handleMovement(event, player, delta);
+                Vec3 deltaDuringMoveEvent = next.deltaDuringMoveEvent();
+                Vec3 deltaReturnedForMoveEvent = next.deltaReturnedForMoveEvent();
+                if (player instanceof LocalPlayer lp && lp.input.shiftKeyDown) {
+                    float sneakSpeedModifier = Mth.clamp(0.3F + EnchantmentHelper.getSneakingSpeedBonus(lp), 0.0f, 1.0f);
+                    deltaDuringMoveEvent = deltaDuringMoveEvent.multiply(sneakSpeedModifier, 1.0, sneakSpeedModifier);
+                    deltaReturnedForMoveEvent = deltaReturnedForMoveEvent.multiply(sneakSpeedModifier, 1.0, sneakSpeedModifier);
+                }
+
+                player.setDeltaMovement(deltaDuringMoveEvent);
+                handleMovement(event, player, deltaReturnedForMoveEvent);
                 current.setCurrentNode(next);
             }
         });
@@ -206,13 +211,24 @@ public class MovementPathfinder extends SubscriberImpl {
                 public void onEvent(LagbackEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
                     State current = state;
                     if (current != null) {
-                        current.resetToPlayer(player);
+                        current.resetToPlayer(player, true);
                         current.timeSinceLastLagBack.reset();
+                        current.algorithm.setWalkTicks(5);
                         current.lagbacks++;
                     }
                 }
             });
         }
+
+        listen(new Listener<StepHeightEvent>() {
+            @Override
+            public void onEvent(StepHeightEvent event) {
+                State current = state;
+                if (current != null && getPlayer(event.getPlayer()) == event.getPlayer() && current.algorithm.getPlayer().getMovement().canStep(event.getPlayer())) {
+                    event.setHeight(current.algorithm.getPlayer().getMovement().getStepHeight());
+                }
+            }
+        });
 
         ResetUtil.onRespawnOrWorldChange(this, pingBypass.getMinecraft(), () -> reset(Result.WORLD_CHANGED));
     }
@@ -225,6 +241,14 @@ public class MovementPathfinder extends SubscriberImpl {
     }
 
     /**
+     * @return the future representing the completion of the current pathfinding process or {@code null} if not following a path.
+     */
+    public @Nullable CompletableFuture<Result> getCurrentFuture() {
+        State current = this.state;
+        return current == null ? null : current.future;
+    }
+
+    /**
      * Follows the given path of {@link MeshNode}s.
      *
      * @param phobot       the phobot instance of which the {@link Movement} will be used.
@@ -233,13 +257,30 @@ public class MovementPathfinder extends SubscriberImpl {
      * @return a {@link CancellableFuture} representing the state of this task, yielding a {@link Result}.
      */
     public CancellableFuture<Result> follow(Phobot phobot, Algorithm.Result<MeshNode> meshNodePath, Vec3 goal) {
+        return followScheduled(phobot, phobot.getMinecraft(), (action, orElse) -> NullabilityUtil.safeOr(phobot.getMinecraft(), action, orElse), meshNodePath, goal);
+    }
+
+    public void cancel() {
+        reset(Result.CANCELLED);
+    }
+
+    @VisibleForTesting
+    protected CancellableFuture<Result> followScheduled(Phobot phobot,
+                                                        BlockableEventLoop<Runnable> eventLoop,
+                                                        BiConsumer<NullabilityUtil.PlayerLevelAndGameModeConsumer, Runnable> nullabilityAction,
+                                                        Algorithm.Result<MeshNode> meshNodePath,
+                                                        Vec3 goal) {
         Cancellation cancellation = new Cancellation();
         CancellableFuture<Result> future = new CancellableFuture<>(cancellation);
-        phobot.getMinecraft().submit(() -> NullabilityUtil.safeOr(phobot.getMinecraft(), ((localPlayer, level, gameMode) -> {
+        eventLoop.submit(() -> nullabilityAction.accept(((localPlayer, level, gameMode) -> {
             Player player = getPlayer(localPlayer);
             if (player == null) {
                 future.complete(Result.GET_PLAYER_FAILURE);
                 return;
+            }
+            // Step Movement is not handled if this is not a LocalPlayer, so we need to give the player movement
+            if (player instanceof MovementPlayer movementPlayer) {
+                movementPlayer.setMovement(phobot.getMovementService().getMovement());
             }
 
             State current = this.state;
@@ -253,10 +294,6 @@ public class MovementPathfinder extends SubscriberImpl {
                 }
             }
 
-            if (start != null && start.next() != null) {
-                log.info("Current: " + start + " next would have been: " + start.next());
-            }
-
             Path<MeshNode> path = new Path<>(
                     player.position(),
                     goal,
@@ -267,19 +304,20 @@ public class MovementPathfinder extends SubscriberImpl {
             );
 
             MovementPathfindingAlgorithm algorithm = new MovementPathfindingAlgorithm(phobot, level, path, player, start, null);
+            log.info("Starting MovementPathfinder on " + player.position() + ", start: " + start + ", algorithm start: " + algorithm.getStart() + ", algo pos: " + algorithm.getPlayer().position());
             // TODO: keep lagbacks and laggedThisTick?
-            this.state = new State(cancellation, future, new AlgorithmRenderer<>(algorithm), algorithm, path, algorithm.getStart(), false, 0);
+            State state = new State(cancellation, future, new AlgorithmRenderer<>(algorithm), algorithm, path, algorithm.getStart(), false, 0);
             if (next != null) {
                 next = new MovementNode(next, algorithm.getGoal(), 0);
                 state.currentNode.next(next);
+                state.algorithm.setCurrentRender(next);
+                state.algorithm.setCurrentMove(next);
             }
+
+            this.state = state;
         }), () -> future.complete(Result.WORLD_CHANGED)));
 
         return future;
-    }
-
-    public void cancel() {
-        reset(Result.CANCELLED);
     }
 
     private void reset(Result result) {
@@ -310,14 +348,19 @@ public class MovementPathfinder extends SubscriberImpl {
         if (!current.currentNode.positionEquals(player.position())) {
             Movement.State movementState = new Movement.State();
             movementState.setDelta(player.getDeltaMovement());
-            log.error("Failed to reach current node: " + new MovementNode(player, movementState, current.algorithm.getGoal(), current.currentNode.targetNodeIndex())
-                    + " vs " + current.currentNode);
+            log.error("Failed to reach current node: \n    " + current.currentNode + "\n    vs actually reached:\n    " +
+                    new MovementNode(player, current.currentNode.state(), current.currentNode.goal(), current.currentNode.targetNodeIndex(),
+                            current.currentNode.deltaDuringMoveEvent(), player.getDeltaMovement()));
             current.resetToPlayer(player);
         }
     }
 
     protected void handleMovement(MoveEvent event, Player player, Vec3 delta) {
         event.setVec(delta);
+    }
+
+    protected void logFailedPath(String message) {
+        pingBypass.getChat().send(Component.literal(message).withStyle(RED), "MovementPathfinder");
     }
 
     /**
@@ -370,13 +413,21 @@ public class MovementPathfinder extends SubscriberImpl {
         private int lagbacks;
 
         public void resetToPlayer(Player player) {
+            resetToPlayer(player, false);
+        }
+
+        public void resetToPlayer(Player player, boolean resetState) {
             MovementNode current = currentNode;
             if (current == null) {
                 return;
             }
 
             Movement.State state = new Movement.State();
-            state.setDelta(new Vec3(0.0, player.getDeltaMovement().y, 0.0));
+            state.setDelta(player.getDeltaMovement());
+            if (resetState) {
+                state.reset();
+            }
+
             // TODO: we need to be careful about the targetNodeIndex!!! Its possible that we cant reach this targetNodeIndex from the spot we got lagged back to?
             MovementNode node = new MovementNode(player, state, algorithm.getGoal(), currentNode.targetNodeIndex());
             currentNode = node;

@@ -1,7 +1,10 @@
 package me.earth.phobot.bot.behaviours;
 
+import lombok.Getter;
 import me.earth.phobot.Phobot;
 import me.earth.phobot.bot.Bot;
+import me.earth.phobot.pathfinder.parallelization.HasPriority;
+import me.earth.phobot.pathfinder.parallelization.ParallelSearchManager;
 import me.earth.pingbypass.PingBypass;
 import me.earth.pingbypass.api.event.SafeListener;
 import me.earth.pingbypass.api.event.SubscriberImpl;
@@ -14,25 +17,31 @@ import net.minecraft.client.player.LocalPlayer;
 /**
  * Base class for {@link Bot} behaviour.
  */
-public abstract class Behaviour extends SubscriberImpl {
-    public static final int PRIORITY_JUMP_DOWN = 0;
-    public static final int PRIORITY_TARGET = -1;
-    public static final int PRIORITY_SUICIDE = -2;
-    public static final int PRIORITY_MINE_AND_REPAIR = -3;
-    public static final int PRIORITY_RUN_AWAY = -4;
-    public static final int PRIORITY_ESCAPE = -5;
-    public static final int PRIORITY_CHASE = -6;
-    public static final int PRIORITY_SCAFFOLD = -7;
-    public static final int PRIORITY_SWORD = -8;
-    public static final int PRIORITY_LAST = -9;
+public abstract class Behaviour extends SubscriberImpl implements HasPriority {
+    public static final int PRIORITY_FIRST = 0;
+    public static final int PRIORITY_JUMP_DOWN = -1;
+    public static final int PRIORITY_TARGET = -2;
+    public static final int PRIORITY_SUICIDE = -3;
+    public static final int PRIORITY_MINE_AND_REPAIR = -4;
+    public static final int PRIORITY_RUN_AWAY = -5;
+    public static final int PRIORITY_ESCAPE = -6;
+    public static final int PRIORITY_CHASE = -7;
+    public static final int PRIORITY_SCAFFOLD = -8;
+    public static final int PRIORITY_SWORD = -9;
+    public static final int PRIORITY_LAST = -10;
 
+    @Getter
+    protected final int priority;
+    protected final ParallelSearchManager pathSearchManager;
     protected final PingBypass pingBypass;
     protected final Phobot phobot;
     protected final Minecraft mc;
     protected final Bot bot;
 
     public Behaviour(Bot bot, int priority) {
+        this.pathSearchManager = bot.getPathSearchManager();
         this.pingBypass = bot.getPingBypass();
+        this.priority = priority;
         this.phobot = bot.getPhobot();
         this.mc = bot.getPingBypass().getMinecraft();
         this.bot = bot;

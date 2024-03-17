@@ -47,7 +47,7 @@ public class InventoryContext {
             return null;
         }
 
-        if (check.test(player.inventoryMenu.getSlot(InventoryMenu.SHIELD_SLOT).getItem())) {
+        if ((flags & SKIP_OFFHAND) == 0 && check.test(player.inventoryMenu.getSlot(InventoryMenu.SHIELD_SLOT).getItem())) {
             return SwitchResult.get(player.inventoryMenu.getSlot(InventoryMenu.SHIELD_SLOT));
         } else if (check.test(getSelectedSlot().getItem())) {
             return SwitchResult.get(getSelectedSlot());

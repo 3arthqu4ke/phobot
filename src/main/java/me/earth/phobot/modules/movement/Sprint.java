@@ -1,15 +1,15 @@
 package me.earth.phobot.modules.movement;
 
-import me.earth.phobot.modules.PhobotNameSpacedModule;
-import me.earth.pingbypass.PingBypass;
+import me.earth.phobot.Phobot;
+import me.earth.phobot.modules.PhobotModule;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.event.loop.LocalPlayerUpdateEvent;
 import me.earth.pingbypass.api.module.impl.Categories;
 import net.minecraft.client.player.LocalPlayer;
 
-public class Sprint extends PhobotNameSpacedModule {
-    public Sprint(PingBypass pingBypass) {
-        super(pingBypass, "Sprint", Categories.MOVEMENT, "Makes you always sprint.");
+public class Sprint extends PhobotModule {
+    public Sprint(Phobot phobot) {
+        super(phobot, "Sprint", Categories.MOVEMENT, "Makes you always sprint.");
         listen(new Listener<LocalPlayerUpdateEvent>() {
             @Override
             public void onEvent(LocalPlayerUpdateEvent event) {
@@ -29,7 +29,7 @@ public class Sprint extends PhobotNameSpacedModule {
     }
 
     private boolean canSprint(LocalPlayer player) {
-        return (mc.options.keyUp.isDown() || mc.options.keyDown.isDown() || mc.options.keyLeft.isDown() || mc.options.keyRight.isDown())
+        return (mc.options.keyUp.isDown() || mc.options.keyDown.isDown() || mc.options.keyLeft.isDown() || mc.options.keyRight.isDown() || phobot.getPathfinder().isFollowingPath())
                 && !(player.isCrouching() || player.horizontalCollision || player.getFoodData().getFoodLevel() <= 6f);
     }
 

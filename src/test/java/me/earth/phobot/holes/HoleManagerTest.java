@@ -2,6 +2,7 @@ package me.earth.phobot.holes;
 
 import lombok.SneakyThrows;
 import me.earth.phobot.BlockableEventLoopImpl;
+import me.earth.phobot.Phobot;
 import me.earth.phobot.TestPhobot;
 import me.earth.phobot.TestUtil;
 import me.earth.phobot.invalidation.ChunkWorker;
@@ -114,7 +115,8 @@ public class HoleManagerTest {
     }
 
     public static HoleManager setupHoleManager() {
-        Holes holes = new Holes(TestPhobot.PHOBOT.getPingBypass(), TestPhobot.PHOBOT.getExecutorService());
+        Phobot phobot = TestPhobot.createNewTestPhobot();
+        Holes holes = new Holes(phobot.getPingBypass(), phobot.getExecutorService());
         holes.getCalcAsync().setValue(false);
         return new HoleManager(holes, new HashMap<>());
     }

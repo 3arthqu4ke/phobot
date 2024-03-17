@@ -1,6 +1,5 @@
 package me.earth.phobot.services.inventory;
 
-import com.mojang.datafixers.types.Func;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.event.PostMotionPlayerUpdateEvent;
@@ -16,7 +15,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;

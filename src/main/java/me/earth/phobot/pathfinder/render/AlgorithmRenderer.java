@@ -2,20 +2,16 @@ package me.earth.phobot.pathfinder.render;
 
 import lombok.AccessLevel;
 import lombok.Getter;
-import me.earth.phobot.Phobot;
 import me.earth.phobot.event.RenderEvent;
-import me.earth.phobot.pathfinder.algorithm.Algorithm;
 import me.earth.phobot.pathfinder.algorithm.PathfindingNode;
 import me.earth.phobot.pathfinder.mesh.MeshNode;
 import me.earth.phobot.pathfinder.movement.MovementNode;
 import me.earth.phobot.pathfinder.movement.MovementPathfindingAlgorithm;
 import me.earth.phobot.util.render.Renderer;
 import me.earth.pingbypass.api.event.SubscriberImpl;
-import me.earth.pingbypass.api.event.api.EventBus;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 
 import java.awt.*;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Renders {@link RenderableAlgorithm}s.
@@ -23,6 +19,8 @@ import java.util.concurrent.CompletableFuture;
  * @param <T> the type of PathfindingNode used by the Algorithm to render.
  */
 public class AlgorithmRenderer<T extends PathfindingNode<T>> extends SubscriberImpl {
+    private static final int MAX_NODES = Integer.parseInt(System.getProperty("phobot.algorithm.render.max.nodes", "1000"));
+
     @Getter(AccessLevel.PROTECTED)
     private final RenderableAlgorithm<T> algorithm;
 
@@ -66,7 +64,7 @@ public class AlgorithmRenderer<T extends PathfindingNode<T>> extends SubscriberI
                 Renderer.drawAABBOutline(event);
             }
 
-            for (int i = 0; i < 10_000_000; i++) { // just to ensure this does not become infinite for any reason
+            for (int i = 0; i < MAX_NODES; i++) { // just to ensure this does not become infinite for any reason
                 T previous = algorithm.getCameFrom(current);
                 if (previous != null) {
                     event.getTo().set(current.getRenderX(), current.getRenderY(), current.getRenderZ());
@@ -81,20 +79,6 @@ public class AlgorithmRenderer<T extends PathfindingNode<T>> extends SubscriberI
 
             Renderer.end(true);
         }
-    }
-
-    /**
-     * Subscribes a new {@link AlgorithmRenderer} on the given EventBus until the Algorithm has been completed.
-     *
-     * @param future the future representing the completion of the Algorithm.
-     * @param eventBus the eventBus to subscribe the renderer on. For unloading, it is important that {@link Phobot#getUnloadingEventBus()} is used!
-     * @param algorithm the algorithm to render.
-     * @param <T> the type of PathfindingNode used by the Algorithm.
-     */
-    public static <T extends PathfindingNode<T>> void render(CompletableFuture<?> future, EventBus eventBus, Algorithm<T> algorithm) {
-        AlgorithmRenderer<T> renderer = new AlgorithmRenderer<>(algorithm);
-        eventBus.subscribe(renderer);
-        future.whenComplete((r,t) -> eventBus.unsubscribe(renderer));
     }
 
 }

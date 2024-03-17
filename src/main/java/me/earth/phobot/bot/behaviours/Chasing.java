@@ -4,82 +4,120 @@ import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.bot.Bot;
 import me.earth.phobot.holes.Hole;
 import me.earth.phobot.pathfinder.mesh.MeshNode;
-import me.earth.phobot.util.math.MathUtil;
+import me.earth.phobot.util.ResetUtil;
+import me.earth.phobot.util.entity.EntityUtil;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.Vec3;
 
 import java.util.Comparator;
-import java.util.concurrent.CompletableFuture;
+import java.util.List;
 
 /**
  * Chases the current target.
  */
 @Slf4j
 public class Chasing extends Behaviour {
-    private volatile CompletableFuture<?> future;
-    private Hole current;
+    private volatile Goal goal;
 
     public Chasing(Bot bot) {
         super(bot, PRIORITY_CHASE);
+        ResetUtil.onRespawnOrWorldChange(this, mc, () -> goal = null);
     }
 
     @Override
     protected void update(LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
-        Hole current = this.current;
-        if (current != null && !current.isValid()) {
-            this.current = null;
-        }
-
-        if (this.future != null /*|| phobot.getPathfinder().isFollowingPath()*/ || bot.getJumpDownFromSpawn().isAboveSpawn(player)) {
-            return;
-        }
-
         Entity target = bot.getTarget();
-        if (target == null || player.distanceToSqr(target) <= 49.0) { // TODO: bring ourselves into KillAura teleport range?
+        if (target == null
+                || EntityUtil.isDeadOrRemoved(target)
+                || !bot.getRunningAway().getRunningAwayRequests().isEmpty()
+                || bot.getJumpDownFromSpawn().isAboveSpawn(player)) {
+            pathSearchManager.cancel(this);
             return;
         }
 
+        if (pathSearchManager.isAtLeastEquallyImportantTo(this)
+                || target.distanceToSqr(player) <= 36.0
+                || player.getAbsorptionAmount() < 16.0f && bot.getSurroundService().isSurrounded()) {
+            return;
+        }
+
+        // TODO:!!!
         boolean isSurrounded = target instanceof Player enemy && bot.getSurroundService().isSurrounded(enemy);
-        Hole best = null;
-        double bestDistance = Double.MAX_VALUE;
-        for (Hole hole : phobot.getHoleManager().getMap().values()) {
-            double distance = hole.getDistanceSqr(target);
-            if ((isSurrounded ? distance < 36.0 : distance < 4.0)) {
-                continue;
-            }
-
-            if (best == null || bestDistance > distance) {
-                best = hole;
-                bestDistance = distance;
+        List<Hole> holes;
+        if (isSurrounded && player.distanceToSqr(target) <= 36.0 && !bot.getSurroundService().isSurrounded()) { // target is safe, and we are close, gotta get in a hole fast!
+            holes = phobot.getHoleManager().getMap().values().stream().distinct().sorted(Comparator.comparingDouble(hole -> hole.getDistanceSqr(player))).toList();
+            // TODO: check against currentTargetHole?
+        } else {
+            // search holes near the target, if it is surrounded a bit further away
+            holes = getHoles(player, target, isSurrounded);
+            Goal currentTargetHole = this.goal;
+            if (currentTargetHole != null && (!isSurrounded || currentTargetHole.hole.getDistanceSqr(target) >= 25.0) && holes.contains(currentTargetHole.hole)) {
+                return;
             }
         }
 
-        if (best == null) {
-            log.info("Failed to chase " + target + " no hole in range found.");
-        } else if (!best.equals(this.current)) {
-            this.current = best;
-            BlockPos pos = best.getAirParts().stream()
-                    .min(Comparator.comparingDouble(p -> MathUtil.distance2dSq(p.getX(), p.getZ(), player.getX(), player.getZ())))
-                    .orElseThrow();
-            MeshNode goal = phobot.getNavigationMeshManager().getMap().get(pos);
-            if (goal == null) {
-                log.warn("Failed to find MeshNode for pos " + pos);
-            } else {
-                var future = phobot.getPathfinder().findPath(player, goal, true);
-                this.future = future;
-                future.whenComplete((r,t) -> mc.submit(() -> this.future = null));
-                Hole finalBest = best;
-                future.thenAccept(result -> {
-                    Vec3 goalPos = finalBest.getCenter();
-                    phobot.getPathfinder().follow(phobot, result, goalPos);
+        if (holes.isEmpty()) {
+            bot.getTargeting().setTarget(null);
+        }
+
+        pathSearchManager.<Hole>applyForPathSearch(this, multiPathSearch -> {
+            for (Hole hole : holes) {
+                MeshNode goal = phobot.getNavigationMeshManager().findFirst(hole.getAirParts());
+                if (goal != null) {
+                    multiPathSearch.findPath(hole, phobot.getPathfinder(), player, goal, true);
+                }
+
+                if (multiPathSearch.getFutures().size() >= bot.getParallelSearches().getValue()) {
+                    break;
+                }
+            }
+
+            multiPathSearch.getFuture().thenAccept(result -> {
+                var holeReference = new Goal(result.key());
+                this.goal = holeReference;
+                mc.submit(() -> {
+                    Entity currentTarget = bot.getTarget();
+                    if (currentTarget == null
+                            || currentTarget != target
+                            || EntityUtil.isDeadOrRemoved(currentTarget)
+                            || !bot.getRunningAway().getRunningAwayRequests().isEmpty()
+                            || bot.getJumpDownFromSpawn().isAboveSpawn(player)) {
+                        synchronized (pathSearchManager) {
+                            if (this.goal == holeReference) {
+                                this.goal = null;
+                            }
+                        }
+
+                        return;
+                    }
+
+                    phobot.getPathfinder().follow(phobot, result.algorithmResult(), result.key().getCenter()).thenAccept(r -> {
+                        synchronized (pathSearchManager) {
+                            if (this.goal == holeReference) {
+                                this.goal = null;
+                            }
+                        }
+                    });
                 });
-            }
-        }
+            });
+        });
     }
+
+    private List<Hole> getHoles(Player player, Entity target, boolean isSurrounded) {
+        return phobot.getHoleManager()
+                .getMap()
+                .values()
+                .stream()
+                .distinct()
+                .filter(hole -> hole.getDistanceSqr(target) <= 100.0) // holes need to be near the target
+                .filter(hole -> hole.getDistanceSqr(target) >= (isSurrounded ? 25.0 : 0.0)) // if the target is surrounded we want to keep our distance
+                .sorted(Comparator.comparing(hole -> isSurrounded ? hole.getDistanceSqr(player) : hole.getDistanceSqr(target)))
+                .toList();
+    }
+
+    private record Goal(Hole hole) { }
 
 }

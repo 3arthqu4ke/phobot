@@ -16,6 +16,10 @@ public class EntityUtil {
     public static final double RANGE = 6.0;
     public static final double RANGE_SQ = ServerGamePacketListenerImpl.MAX_INTERACTION_DISTANCE;
 
+    public static boolean isDeadOrRemoved(Entity entity) {
+        return !entity.isAlive() || entity.isRemoved() || entity instanceof LivingEntity livingEntity && livingEntity.isDeadOrDying();
+    }
+
     public static boolean isDead(LivingEntity entity) {
         return !entity.isAlive() || entity.isDeadOrDying();
     }

@@ -27,7 +27,6 @@ import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import me.earth.pingbypass.api.event.loop.GameloopEvent;
 import me.earth.pingbypass.api.event.network.PacketEvent;
 import me.earth.pingbypass.api.event.network.PrePostSubscriber;
-import me.earth.pingbypass.api.gui.hud.DisplaysHudInfo;
 import me.earth.pingbypass.api.input.Bind;
 import me.earth.pingbypass.api.setting.Setting;
 import me.earth.pingbypass.api.traits.Nameable;
@@ -53,7 +52,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Getter
 @Accessors(fluent = true)
-public class CrystalPlacingModule extends BlockPlacingModule implements DisplaysHudInfo {
+public class CrystalPlacingModule extends BlockPlacingModule {
     public static final double CRYSTAL_RADIUS = 12.0;
     public static final double CRYSTAL_RADIUS_SQ = CRYSTAL_RADIUS * CRYSTAL_RADIUS;
 
@@ -78,6 +77,9 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
     private final Setting<Integer> breakPrediction = number("BreakPrediction", 0, 0, 6, "Ticks to predict enemy player movement for when calculating damage for breaking crystals.");
     private final Setting<PacketRotationMode> packetRotations = constant("PacketRotations", PacketRotationMode.None, "Send packets to rotate.");
     private final Setting<Boolean> gameLoop = bool("GameLoop", true, "Runs on game loop.");
+    private final Setting<Integer> gameLoopDelay = number("GameLoopDelay", -1, -1, 1_000, "Interval in milliseconds with which to run game loop calculations." +
+            " -1 means that this will only be used as a fallback.");
+    private final Setting<Integer> pollBreakDelay = number("Poll-BreakDelay", 100, 0, 500, "Break delay to use when not attacking crystals that have existed for longer.");
 
     private final CalculationService calculationService = new CalculationService(this);
     private final PositionPool<CrystalPosition> positionPool = new PositionPool<>(7, CrystalPosition::new, new CrystalPosition[0]);
@@ -98,7 +100,8 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
             phobot.getMotionUpdateService(),
             phobot.getInventoryService(),
             phobot.getMinecraft(),
-            phobot.getAntiCheat());
+            phobot.getAntiCheat(),
+            phobot.getAttackService());
     private final SurroundService surroundService;
 
     @Setter
@@ -126,7 +129,11 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
             @Override
             public void onEvent(GameloopEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
                 if (gameLoop.getValue()) {
-                    calculationService.calculate(level, player, placeTimer.passed(100L) && breakTimer.passed(100L) ? 50 : 100, multiThreading.getValue());
+                    calculationService.calculate(
+                            level,
+                            player,
+                            gameLoopDelay.getValue() == -1 ? (placeTimer.passed(100L) && breakTimer.passed(100L) ? 50 : 100) : gameLoopDelay.getValue(),
+                            multiThreading.getValue());
                 }
             }
         });
@@ -187,16 +194,6 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
     @Override
     protected void onDisable() {
         this.reset();
-    }
-
-    @Override
-    public String getHudInfo() {
-        Entity target = this.target;
-        if (target instanceof Player player) {
-            return player.getScoreboardName();
-        }
-
-        return null;
     }
 
     @Override
@@ -295,10 +292,10 @@ public class CrystalPlacingModule extends BlockPlacingModule implements Displays
 
                     int replaceTime = this.replaceTime.getValue();
                     if (replaceTime == 0) {
-                        calculationService.calculate(level, player, 0, multiThreading.getValue(), calculation -> calculation.setRunBreakingCalculation(false));
+                        calculationService.calculate(level, player, 0, multiThreading.getValue(), calculation -> calculation.setBreakCrystals(false));
                     } else if (replaceTime > 0) {
                         phobot.getTaskService().addTaskToBeExecutedIn(replaceTime, CrystalPlacingModule.this, () -> {
-                            calculationService.calculate(level, player, 0, multiThreading.getValue(), calculation -> calculation.setRunBreakingCalculation(false));
+                            calculationService.calculate(level, player, 0, multiThreading.getValue(), calculation -> calculation.setBreakCrystals(false));
                             if (reCalcTime.getValue() != 0) {
                                 phobot.getTaskService().addTaskToBeExecutedIn(reCalcTime.getValue(), CrystalPlacingModule.this, () -> {
                                     Entity stillLivingCrystal = level.getEntity(endCrystal.getId());

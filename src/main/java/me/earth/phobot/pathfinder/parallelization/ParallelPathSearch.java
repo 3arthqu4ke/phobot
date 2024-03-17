@@ -1,9 +1,11 @@
-package me.earth.phobot.pathfinder.util;
+package me.earth.phobot.pathfinder.parallelization;
 
 import lombok.Getter;
 import me.earth.phobot.pathfinder.Pathfinder;
 import me.earth.phobot.pathfinder.algorithm.Algorithm;
 import me.earth.phobot.pathfinder.mesh.MeshNode;
+import me.earth.phobot.pathfinder.util.CancellableFuture;
+import me.earth.phobot.pathfinder.util.Cancellation;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.Map;
@@ -11,10 +13,15 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Allows you to run multiple pathfinding searches with {@link Algorithm}s in parallel and retrieves the first result that gets found.
+ *
+ * @param <T> the type of key to use to index the running algorithms.
+ */
 @Getter
-public class MultiPathSearch<T> extends Cancellation {
+public class ParallelPathSearch<T> extends Cancellation {
     private final Map<T, CancellableFuture<Algorithm.Result<MeshNode>>> futures = new ConcurrentHashMap<>();
-    private final CancellableFuture<MultiPathSearch.Result<T>> future = new CancellableFuture<>(this);
+    private final CancellableFuture<ParallelPathSearch.Result<T>> future = new CancellableFuture<>(this);
 
     @Override
     public void setCancelled(boolean cancelled) {

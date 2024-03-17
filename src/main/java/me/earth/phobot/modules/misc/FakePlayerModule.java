@@ -3,14 +3,15 @@ package me.earth.phobot.modules.misc;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import me.earth.phobot.Phobot;
-import me.earth.phobot.ducks.IDamageProtectionEntity;
+import me.earth.phobot.bot.Bot;
 import me.earth.phobot.event.MoveEvent;
 import me.earth.phobot.event.PreMotionPlayerUpdateEvent;
-import me.earth.phobot.modules.PhobotModule;
+import me.earth.phobot.modules.AbstractFakePlayerModule;
 import me.earth.phobot.pathfinder.mesh.MeshNode;
 import me.earth.phobot.pathfinder.movement.MovementNode;
 import me.earth.phobot.pathfinder.movement.MovementPathfinder;
-import me.earth.phobot.pathfinder.util.MultiPathSearch;
+import me.earth.phobot.pathfinder.parallelization.ParallelPathSearch;
+import me.earth.phobot.pathfinder.parallelization.ParallelSearchManager;
 import me.earth.phobot.services.PlayerPosition;
 import me.earth.phobot.util.ResetUtil;
 import me.earth.phobot.util.math.RotationUtil;
@@ -28,8 +29,6 @@ import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
@@ -47,13 +46,14 @@ import static me.earth.pingbypass.api.command.CommandSource.literal;
 /**
  * Spawns a {@link FakePlayer}.
  */
-public class FakePlayerModule extends PhobotModule implements HasCustomModuleCommand {
+public class FakePlayerModule extends AbstractFakePlayerModule implements HasCustomModuleCommand {
     private static final int ID = -2352352;
 
     private final Setting<Boolean> pathfinder = bool("Pathfinder", false, "Uses the pathfinder to move around you.");
     private final Setting<Boolean> record = bool("Record", false, "Records your movements.");
     private final Setting<Boolean> play = bool("Play", false, "Plays recorded movements.");
     private final List<PlayerPosition> positions = new ArrayList<>();
+    private final ParallelSearchManager search = new ParallelSearchManager();
     private final MovementPathfinder movementPathfinder;
 
     private boolean wasRecording;
@@ -61,10 +61,9 @@ public class FakePlayerModule extends PhobotModule implements HasCustomModuleCom
 
     private MovementPlayer movementPathfinderPlayer;
     private volatile MeshNode currentMeshNode;
-    private MultiPathSearch<MeshNode> pathSearch;
 
     public FakePlayerModule(Phobot phobot) {
-        super(phobot, "FakePlayer", Categories.MISC, "Creates a FakePlayer to test stuff with.");
+        super(phobot, "FakePlayer", Categories.MISC, "Creates a FakePlayer to test stuff with.", ID);
         this.movementPathfinder = new FakePlayerMovementPathfinder(this);
         this.movementPathfinder.getListeners().forEach(this::listen);
         ResetUtil.disableOnRespawnAndWorldChange(this, mc);
@@ -94,7 +93,7 @@ public class FakePlayerModule extends PhobotModule implements HasCustomModuleCom
                     }
 
                     PlayerPosition position = positions.get(playIndex);
-                    Entity entity = level.getEntity(ID);
+                    Entity entity = getPlayer(level);
                     if (entity != null) {
                         entity.lerpTo(position.getX(), position.getY(), position.getZ(), position.getYRot(), position.getXRot(), 3);
                     }
@@ -112,11 +111,7 @@ public class FakePlayerModule extends PhobotModule implements HasCustomModuleCom
     protected void onDisable() {
         record.setValue(false);
         playIndex = 0;
-        ClientLevel level = mc.level;
-        if (level != null) {
-            level.removeEntity(ID, Entity.RemovalReason.DISCARDED);
-        }
-
+        super.onDisable();
         cancelPathfinding();
         movementPathfinderPlayer = null;
     }
@@ -125,27 +120,16 @@ public class FakePlayerModule extends PhobotModule implements HasCustomModuleCom
     protected void onEnable() {
         wasRecording = false;
         playIndex = 0;
-        ClientLevel level = mc.level;
-        LocalPlayer player = mc.player;
-        if (level != null && player != null) {
-            FakePlayer fakePlayer = new FakePlayer(level);
-            movementPathfinderPlayer = new MovementPlayer(level);
-            movementPathfinderPlayer.copyPosition(player);
-            fakePlayer.setId(ID);
-            fakePlayer.copyPosition(player);
-            for (int i = 0; i < fakePlayer.getInventory().getContainerSize(); i++) {
-                fakePlayer.getInventory().setItem(i, player.getInventory().getItem(i));
-            }
+        super.onEnable();
+    }
 
-            level.addEntity(fakePlayer);
-            fakePlayer.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 400, 1));
-            fakePlayer.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 6000, 0));
-            fakePlayer.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 2400, 3));
-            //noinspection DataFlowIssue
-            ((IDamageProtectionEntity) fakePlayer).phobot$setDamageProtection(((IDamageProtectionEntity) player).phobot$damageProtection());
-        } else {
-            disable();
-        }
+    @Override
+    protected FakePlayer create(LocalPlayer player, ClientLevel level) {
+        FakePlayer fakePlayer = super.create(player, level);
+        MovementPlayer movementPathfinderPlayer = new MovementPlayer(level);
+        movementPathfinderPlayer.copyPosition(fakePlayer);
+        this.movementPathfinderPlayer = movementPathfinderPlayer;
+        return fakePlayer;
     }
 
     @Override
@@ -177,21 +161,16 @@ public class FakePlayerModule extends PhobotModule implements HasCustomModuleCom
 
     private void cancelPathfinding() {
         currentMeshNode = null;
-        var multiPathSearch = pathSearch;
-        if (multiPathSearch != null) {
-            multiPathSearch.getFutures().values().forEach(f -> f.cancel(true));
-            pathSearch = null;
-        }
-
-        this.movementPathfinder.cancel();
+        search.cancel();
+        movementPathfinder.cancel();
     }
 
     private void doPathfinding(LocalPlayer player, ClientLevel level) {
         MeshNode currentMeshNode = this.currentMeshNode;
         if (currentMeshNode == null) {
             findInitialMeshNodes(player, level);
-        } else if (!movementPathfinder.isFollowingPath() && pathSearch == null) {
-            Entity fakePlayer = level.getEntity(ID);
+        } else if (!movementPathfinder.isFollowingPath() && !search.isSearching()) {
+            Entity fakePlayer = getPlayer(level);
             if (fakePlayer != null) {
                 var optionalStart = phobot.getNavigationMeshManager().getStartNode(fakePlayer);
                 optionalStart.ifPresent(start -> {
@@ -208,23 +187,23 @@ public class FakePlayerModule extends PhobotModule implements HasCustomModuleCom
                         return;
                     }
 
-                    MultiPathSearch<MeshNode> multiPathSearch = new MultiPathSearch<>();
-                    for (MeshNode goal : closestMeshNodes) {
-                        multiPathSearch.addFuture(goal, phobot.getPathfinder().findPath(start, goal, false));
-                        if (multiPathSearch.getFutures().size() >= 10) {
-                            break;
+                    search.<MeshNode>applyForPathSearch(() -> 0, multiPathSearch -> {
+                        for (MeshNode goal : closestMeshNodes) {
+                            multiPathSearch.addFuture(goal, phobot.getPathfinder().findPath(start, goal, false));
+                            if (multiPathSearch.getFutures().size() >= getPingBypass().getModuleManager().getByClass(Bot.class).orElseThrow().getParallelSearches().getValue()) {
+                                break;
+                            }
                         }
-                    }
 
-                    multiPathSearch.allFuturesAdded();
-                    addCompletion(multiPathSearch, level);
+                        addCompletion(multiPathSearch, level);
+                    });
                 });
             }
         }
     }
 
     private void findInitialMeshNodes(LocalPlayer player, ClientLevel level) {
-        if (pathSearch != null) {
+        if (search.isSearching()) {
             return;
         }
 
@@ -237,41 +216,38 @@ public class FakePlayerModule extends PhobotModule implements HasCustomModuleCom
             return;
         }
 
-        MultiPathSearch<MeshNode> multiPathSearch = new MultiPathSearch<>();
-        for (int i = 0; i < 10; i += 2) {
-            if (i >= closestMeshNodes.size() - 1) {
-                break;
+        search.<MeshNode>applyForPathSearch(() -> 0, multiPathSearch -> {
+            for (int i = 0; i < 10; i += 2) {
+                if (i >= closestMeshNodes.size() - 1) {
+                    break;
+                }
+
+                MeshNode start = closestMeshNodes.get(i);
+                MeshNode goal = closestMeshNodes.get(i + 1);
+                multiPathSearch.addFuture(goal, phobot.getPathfinder().findPath(start, goal, false));
+                multiPathSearch.getFuture().thenAccept(result -> {
+                    if (result.key() == goal) {
+                        mc.submit(() -> {
+                            Player movementPathfinderPlayer = this.movementPathfinderPlayer;
+                            if (movementPathfinderPlayer != null) {
+                                movementPathfinderPlayer.setPos(start.getCenter(new BlockPos.MutableBlockPos(), level));
+                            }
+                        });
+                    }
+                });
             }
 
-            MeshNode start = closestMeshNodes.get(i);
-            MeshNode goal = closestMeshNodes.get(i + 1);
-            multiPathSearch.addFuture(goal, phobot.getPathfinder().findPath(start, goal, false));
-            multiPathSearch.getFuture().thenAccept(result -> {
-                if (result.key() == goal) {
-                    mc.submit(() -> {
-                        Player movementPathfinderPlayer = this.movementPathfinderPlayer;
-                        if (movementPathfinderPlayer != null) {
-                            movementPathfinderPlayer.setPos(start.getCenter(new BlockPos.MutableBlockPos(), level));
-                        }
-                    });
-                }
-            });
-        }
-
-        addCompletion(multiPathSearch, level);
+            addCompletion(multiPathSearch, level);
+        });
     }
 
-    private void addCompletion(MultiPathSearch<MeshNode> multiPathSearch, ClientLevel level) {
-        multiPathSearch.allFuturesAdded();
-        this.pathSearch = multiPathSearch;
+    private void addCompletion(ParallelPathSearch<MeshNode> multiPathSearch, ClientLevel level) {
         multiPathSearch.getFuture().whenComplete((result, t) -> mc.submit(() -> {
             if (result != null && this.isEnabled()) {
                 currentMeshNode = result.key();
                 Vec3 goal = result.key().getCenter(new BlockPos.MutableBlockPos(), level);
                 this.movementPathfinder.follow(phobot, result.algorithmResult(), goal);
             }
-
-            this.pathSearch = null;
         }));
     }
 
@@ -294,8 +270,9 @@ public class FakePlayerModule extends PhobotModule implements HasCustomModuleCom
             super.applyMovementNode(player, movementNode);
             ClientLevel level = fakePlayerModule.mc.level;
             if (level != null) {
-                Entity entity = level.getEntity(ID);
+                Entity entity = fakePlayerModule.getPlayer(level);
                 if (entity != null) {
+                    vec.set(player.getDeltaMovement());
                     float[] rotations = RotationUtil.lookIntoMoveDirection(player, vec);
                     entity.lerpTo(player.getX(), player.getY(), player.getZ(), rotations[0], rotations[1], 3);
                 }
@@ -310,6 +287,11 @@ public class FakePlayerModule extends PhobotModule implements HasCustomModuleCom
         @Override
         protected void handleMovement(MoveEvent event, Player player, Vec3 delta) {
             // player.travel(delta);
+        }
+
+        @Override
+        protected void logFailedPath(String message) {
+            // no logging
         }
     }
 

@@ -15,7 +15,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.item.EnchantedGoldenAppleItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -34,12 +33,13 @@ public class Swording extends Behaviour {
     protected void update(LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
         boolean stoppedBecauseTimer = false;
         if (phobot.getPathfinder().isFollowingPath()
+                || !bot.getAura().getValue()
                 || bot.getJumpDownFromSpawn().isAboveSpawn(player)
                 || bot.getModules().getAutoCrystal().getTarget() != null
                 || !bot.getModules().getKillAura().isEnabled()
                 || phobot.getInventoryService().isLockedIntoTotem()
                 || !bot.getSurroundService().isSurrounded()
-                || (stoppedBecauseTimer = !timer.passed(2_500L))) {
+                || (stoppedBecauseTimer = !timer.passed(3_500L))) { // <- eating Golden Apple + Chorus Fruit + Some ms leniency
             boolean finalStoppedBecauseTimer = stoppedBecauseTimer;
             phobot.getInventoryService().use(ctx -> {
                 // On Grim AntiCheat the NoSlowDown for Offhand is terrible, as it requires us to switch items

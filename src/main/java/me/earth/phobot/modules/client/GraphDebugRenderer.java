@@ -7,7 +7,6 @@ import me.earth.phobot.pathfinder.mesh.NavigationMeshManager;
 import me.earth.phobot.util.render.Renderer;
 import me.earth.pingbypass.api.event.listeners.generic.Listener;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.BlockPos;
 
 import java.awt.*;
 import java.util.Set;

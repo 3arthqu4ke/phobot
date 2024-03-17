@@ -5,7 +5,6 @@ import me.earth.phobot.pathfinder.blocks.BlockPathfinder;
 import me.earth.phobot.services.BlockPlacer;
 import me.earth.pingbypass.api.setting.Setting;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;

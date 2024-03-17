@@ -61,8 +61,8 @@ public class AStarTest {
             var path = findPath(meshManager, new BlockPos(10, 1, 10), new BlockPos(0, 3, 0));
             assertNotNull(path);
             assertEquals(21, path.getPath().size());
-            assertEquals(new MeshNode(new ChunkWorker(), 0, 3, 0), path.getPath().get(0));
-            assertEquals(new MeshNode(new ChunkWorker(), 10, 1, 10), path.getPath().get(path.getPath().size() - 1));
+            assertEquals(new MeshNode(meshManager.getPooling(), new ChunkWorker(), 0, 3, 0), path.getPath().get(0));
+            assertEquals(new MeshNode(meshManager.getPooling(), new ChunkWorker(), 10, 1, 10), path.getPath().get(path.getPath().size() - 1));
         }
     }
 

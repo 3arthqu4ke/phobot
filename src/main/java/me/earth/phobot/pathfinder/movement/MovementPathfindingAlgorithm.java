@@ -22,6 +22,7 @@ import me.earth.phobot.util.time.TimeUtil;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -68,9 +69,9 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
      */
     private int noMoveUpdates;
     /**
-     * If {@code null}, we can BHop, if not {@code null} we should walk for this distance.
+     * If > 0, we will walk for this amount of ticks and not bunnyhop.
      */
-    private @Nullable Double walkOnly; // TODO: rework this!
+    private int walkTicks;
 
     /**
      * Constructs a new MovementPathfindingAlgorithm.
@@ -84,8 +85,8 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
      */
     public MovementPathfindingAlgorithm(Phobot phobot, ClientLevel level, Path<MeshNode> path, @Nullable Player player, @Nullable MovementNode start, @Nullable MovementNode goal) {
         this(phobot, level, path, new MovementPlayer(level), phobot.getPingBypass().getModuleManager().getByClass(FastFall.class).orElseGet(() -> new FastFall(phobot, null)),
-             player == null ? Collections.emptyList() : new ArrayList<>(player.getActiveEffects()), start, goal, null, null, 0, null);
-        init();
+             player == null ? Collections.emptyList() : new ArrayList<>(player.getActiveEffects()), start, goal, null, null, 0, 0);
+        init(player);
     }
 
     @Override
@@ -136,10 +137,11 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
     /**
      * Updates the effects the player is currently under. The pathfinder will update based on these.
      *
-     * @param effects the effects currently active.
+     * @param localPlayer the local player to get the effects from.
      */
-    public void updatePotionEffects(Collection<MobEffectInstance> effects) {
-        this.effects = effects;
+    public void updatePlayer(Player localPlayer) {
+        this.effects = localPlayer.getActiveEffects();
+        player.setSpeed((float) localPlayer.getAttributeValue(Attributes.MOVEMENT_SPEED));
         player.getActiveEffectsMap().clear();
         effects.forEach(player::addEffect);
     }
@@ -156,7 +158,7 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
         assert currentMove != null;
         currentMove.apply(player);
         // we prefer walking towards the goal if we are close to it
-        boolean preferWalking = walkOnly != null || currentMove.distanceSq(goal) < 6.25/* 2.5 ^ 2 */;
+        boolean preferWalking = currentMove.distanceSq(goal) < 6.25/* 2.5 ^ 2 */;
         if (!preferWalking && bunnyHopTowardsTarget()) { // attempt to bunny hop towards the target
             return true;
         }
@@ -186,7 +188,6 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
         }
 
         currentMove.apply(player);
-        log.debug("Strafing towards next: " + (targetNodeIndex) + " at " + meshNode);
         if (!strafeTowards(meshNode, targetNodeIndex)) {
             if (targetNodeIndex == 0 && path.getPath().size() > 1 && strafeTowards(path.getPath().get(1), 1)) {
                 return true;
@@ -216,9 +217,10 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
             double x = isGoal ? goal.getX() : meshNode.getX() + 0.5;
             double y = isGoal ? goal.getY() : PositionUtil.getMaxYAtPosition(mutPos.set(meshNode.getX(), meshNode.getY() - 1, meshNode.getZ()), level);
             double z = isGoal ? goal.getZ() : meshNode.getZ() + 0.5;
+            // TODO: here we need at least a distance threshold, because right now this might find a straight path to any meshnode, even ones that are 100 blocks away
+            //  which is actually not that bad of a thing? But will cost lots of computational power
             // TODO: optimize, do not bunnyhop for long falls?
             if (currentMove.isStart() || i > currentMove.targetNodeIndex()) {
-                log.debug("Can reach " + i + " at " + (meshNode.getX() + 0.5) + " " + (meshNode.getY() + " " +  (meshNode.getZ() + 0.5) + " from " + player.position()));
                 // we can reach this MeshNode from our current position, attempt to move towards it
                 if (moveTowards(x, y, z, isGoal, i, false)) {
                     log.debug("Successfully bunny hopped towards " + meshNode);
@@ -242,6 +244,7 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
     }
 
     private boolean moveTowards(double x, double y, double z, boolean isGoal, int targetNodeIndex, boolean strafe) {
+        int walkTicksLeft = walkTicks;
         // The horizontal direction to move towards the target x and z from our current position.
         Vec3 initialDelta = new Vec3(x - currentMove.getX(), 0.0, z - currentMove.getZ()).normalize();
 
@@ -346,7 +349,11 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
             delta = normalize ? (strafe && !strafeFall ? delta.normalize() : initialDelta) : delta;
             log.debug("Delta after transform: " + delta + ", " + isGoal + ", distance to goal: " + currentJump.distance(goal) + ", " + currentJump.getY() + " vs " + goal.getY());
             lastJump = currentJump;
-            currentJump = move(currentJump, targetNodeIndex, new Vec3(delta.x, player.getDeltaMovement().y, delta.z), strafe, normalize);
+            currentJump = move(currentJump, targetNodeIndex, new Vec3(delta.x, player.getDeltaMovement().y, delta.z), walkTicksLeft > 0 || strafe, normalize);
+            if (currentJump != lastJump) {
+                walkTicksLeft = Math.max(0, walkTicksLeft - 1);
+            }
+
             if (firstJump == null) {
                 firstJump = currentJump;
             }
@@ -365,6 +372,7 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
 
             currentMove.next(firstJump);
             currentMove = currentJump;
+            walkTicks = walkTicksLeft;
             log.debug("Success! " + currentJump.targetNodeIndex() + " reached: " + currentJump);
             currentRender = currentMove;
             return true;
@@ -374,29 +382,59 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
         return false;
     }
 
+    /**
+     * Moves the {@link #player} one tick into the given direction.
+     *
+     * @param node the node we were starting on, which also supplies the previous {@link Movement.State} to use for our speed hacks.
+     * @param targetNodeIndex the index of the {@link MeshNode} we plan to move towards with this move.
+     * @param directionAndYMovement the direction we are moving in, the y component is the players Y-Delta.
+     * @param strafe if we should strafe instead of bunny hop.
+     * @param normalized when not normalized it means that we are doing one last move to hit the goal, in that case we always strafe.
+     * @return a new MovementNode that represents the next position the player will be on, or {@code null} if failed.
+     */
     private @Nullable MovementNode move(MovementNode node, int targetNodeIndex, Vec3 directionAndYMovement, boolean strafe, boolean normalized) {
         Movement.State[] stateRef = new Movement.State[1];
+        Vec3[] deltaDuringMoveEventRef = new Vec3[1];
+        Vec3[] deltaReturnedForMoveEventRef = new Vec3[1];
         double xBefore = player.getX();
         double zBefore = player.getZ();
+        // The move callback essentially simulates a MoveEvent. We modify the delta vector the same way Movement modules would do during a MoveEvent
         player.setMoveCallback(delta -> {
-            Movement.State state = !normalized
-                ? new Movement.State(phobot.getMovementService().getMovement().getSpeed(player), 0.0, directionAndYMovement, 0, false, false)
-                : strafe
-                    ? phobot.getMovementService().getMovement().strafe(player, level, node.state(), directionAndYMovement)
-                    : phobot.getMovementService().getMovement().move(player, level, node.state(), directionAndYMovement);
-
-            stateRef[0] = state;
-            if (state.isReset()) {
-                state.setDelta(new Vec3(delta.x, delta.y, delta.z));
+            Vec3 dir = new Vec3(directionAndYMovement.x, player.getDeltaMovement().y, directionAndYMovement.z);
+            Movement.State state;
+            boolean hasStrafed = false;
+            boolean hasBunnyHopped = false;
+            if (phobot.getMovementService().getMovement().shouldNotUseMovementHacks(player)) {
+                state = new Movement.State(0.0, 0.0, delta, 0, false, true);
+            } else if (!normalized) {
+                state = new Movement.State(phobot.getMovementService().getMovement().getSpeed(player), 0.0, dir, 0, false, false);
+            } else if (strafe) {
+                hasStrafed = true;
+                state = phobot.getMovementService().getMovement().strafe(player, level, node.state(), dir);
             } else {
+                hasBunnyHopped = true;
+                state = phobot.getMovementService().getMovement().move(player, level, node.state(), dir);
+            }
+
+            // TODO: !!! y-Movement in our Movement system is the root of all evil!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            stateRef[0] = state;
+            Vec3 moveEventDelta = state.getDelta();
+            if (state.isReset()) {
+                moveEventDelta = delta;
+            } else if (hasBunnyHopped) {
                 player.setDeltaMovement(delta.x, state.getDelta().y, delta.z);
+            } else if (hasStrafed) {
+                player.setDeltaMovement(state.getDelta().x, state.getDelta().y, state.getDelta().z);
             }
 
-            if (strafe && fastFall.isEnabled() && fastFall.canFastFall(player, state.getDelta(), level, false)) {
-                state.setDelta(fastFall.getFastFallVec(state.getDelta()));
+            if (!hasBunnyHopped && fastFall.isEnabled() && fastFall.canFastFall(player, state.getDelta(), level, false)) {
+                moveEventDelta = fastFall.getFastFallVec(moveEventDelta);
             }
 
-            return state.getDelta();
+            // copy because there are clients that make Vec3 mutable :(
+            deltaDuringMoveEventRef[0] = new Vec3(player.getDeltaMovement().x, player.getDeltaMovement().y, player.getDeltaMovement().z);
+            deltaReturnedForMoveEventRef[0] = new Vec3(moveEventDelta.x, moveEventDelta.y, moveEventDelta.z);
+            return moveEventDelta;
         });
 
         /*
@@ -410,17 +448,22 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
 
         */
 
-        player.travel();
+        // TODO: THIS IS NOT PERFECT YET!
+        Vec3 xxVec = new Vec3(directionAndYMovement.x, 0.0, directionAndYMovement.z).normalize();
+        player.xxa = (float) xxVec.x;
+        player.yya = 0.0f;
+        player.zza = (float) xxVec.z;
+        player.aiTravel();
         Movement.State state = stateRef[0];
-        if (state == null) {
+        Vec3 deltaDuringMoveEvent = deltaDuringMoveEventRef[0];
+        Vec3 deltaReturnedForMoveEvent = deltaReturnedForMoveEventRef[0];
+        if (state == null || deltaDuringMoveEvent == null || deltaReturnedForMoveEvent == null) {
             log.error("Something went wrong while moving from " + node + " in direction " + directionAndYMovement);
             return null;
         }
 
-        log.debug("Moved towards " + targetNodeIndex + " bunnyHop: " + !strafe + " " + state.getStage());
         state.setDistance(Math.sqrt((player.getX() - xBefore) * (player.getX() - xBefore) + (player.getZ() - zBefore) * (player.getZ() - zBefore)));
-        state.setDelta(new Vec3(state.getDelta().x, player.getDeltaMovement().y, state.getDelta().z));
-        MovementNode movementNode = new MovementNode(player, state, goal, targetNodeIndex);
+        MovementNode movementNode = new MovementNode(player, state, goal, targetNodeIndex, deltaDuringMoveEvent, deltaReturnedForMoveEvent);
         movementNode.previous(node);
         if (node != currentMove) { // the new nodes we compute will only be connected to the actualCurrent path after we have landed successfully
             node.next(movementNode);
@@ -442,27 +485,41 @@ public class MovementPathfindingAlgorithm implements RenderableAlgorithm<Movemen
         return node;
     }
 
-    private void init() {
+    private void init(@Nullable Player initialPlayer) {
         player.setMovement(phobot.getMovementService().getMovement());
-        updatePotionEffects(effects);
+        if (initialPlayer != null) {
+            updatePlayer(initialPlayer);
+        }
 
         if (goal == null) {
-            goal = new MovementNode(path.getExactGoal(), new Movement.State(), null, false, false, false, false, 0.0f, path.getPath().size() - 1);
+            Vec3 gravity = new Vec3(0.0, phobot.getMovementService().getMovement().getDeltaYOnGround(), 0.0);
+            goal = MovementNode.createGoalNode(path, gravity);
         } else {
             goal = new MovementNode(goal, goal, path.getPath().size() - 1);
         }
 
         if (start == null) {
             player.setPos(path.getExactStart());
-            player.verticalCollision = true;
-            player.verticalCollisionBelow = true;
-            player.horizontalCollision = false; // TODO: ?
-            player.setOnGround(true);
             Movement.State state = new Movement.State();
-            state.setDelta(new Vec3(0.0, -phobot.getMovementService().getMovement().getDeltaYOnGround(), 0.0));
+            if (initialPlayer != null) {
+                EntityMovementSnapshot snapshot = new EntityMovementSnapshot(initialPlayer);
+                snapshot.apply(player);
+                state.setDelta(initialPlayer.getDeltaMovement());
+            } else {
+                player.verticalCollision = true;
+                player.verticalCollisionBelow = true;
+                player.horizontalCollision = false;
+                player.setSpeed((float) player.getAttributeValue(Attributes.MOVEMENT_SPEED));
+                player.setOnGround(true);
+                Vec3 gravity = new Vec3(0.0, phobot.getMovementService().getMovement().getDeltaYOnGround(), 0.0);
+                state.setDelta(gravity);
+                player.setDeltaMovement(gravity);
+            }
+
             start = new MovementNode(player, state, goal, 0);
         } else { // start could have been used in a previous pathing process, copy and set new goal and targetNodeIndex
             start = new MovementNode(start, goal, 0);
+            start.apply(player);
         }
 
         currentMove = start;

@@ -47,8 +47,12 @@ public interface BlockStateLevel extends CollisionGetter {
         private final BlockGetter chunkForCollisions;
 
         public BlockStateLevelImpl(ClientLevel level) {
+            this(level, new HashMap<>());
+        }
+
+        public BlockStateLevelImpl(ClientLevel level, Map<BlockPos, BlockState> map) {
             this.level = level;
-            this.map = new HashMap<>();
+            this.map = map;
             this.chunkForCollisions = new BlockStateLevelImpl(level, this.map, level) {
                 @Override
                 public @Nullable BlockGetter getChunkForCollisions(int x, int z) {
