@@ -65,7 +65,7 @@ public class PositionUtil {
     }
 
     public static String toSimpleString(Abstract3iNode<?> position) {
-        return position.getX() + ", " + position.getX() + ", " + position.getZ();
+        return position.getX() + ", " + position.getY() + ", " + position.getZ();
     }
 
     public static double getMaxYAtPosition(BlockPos.MutableBlockPos pos, Level level) {

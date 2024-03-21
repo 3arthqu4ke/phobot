@@ -6,6 +6,7 @@ import net.minecraft.core.Position;
 import net.minecraft.core.SectionPos;
 import org.jetbrains.annotations.NotNull;
 
+// TODO: implement equals with EPSILON leniency?!?!?!?!?!?!?!?!?!?!?!?!
 @Data
 public abstract class Abstract3dNode<N extends Abstract3dNode<N>> implements PathfindingNode<N>, Position {
     private final double x;

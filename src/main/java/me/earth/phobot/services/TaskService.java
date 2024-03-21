@@ -34,7 +34,7 @@ public class TaskService extends SubscriberImpl {
     }
 
     public void addTaskToBeExecutedIn(long ms, Runnable runnable) {
-        long time = TimeUtil.getMillis() + ms;
+        long time = TimeUtil.getMillis() + ms; // <- not protected against overflows but whatever
         mc.submit(() -> tasks.add(new Task(runnable, time)));
     }
 

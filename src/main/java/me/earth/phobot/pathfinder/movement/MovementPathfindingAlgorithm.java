@@ -12,8 +12,6 @@ import me.earth.phobot.pathfinder.Path;
 import me.earth.phobot.pathfinder.Pathfinder;
 import me.earth.phobot.pathfinder.algorithm.Algorithm;
 import me.earth.phobot.pathfinder.mesh.MeshNode;
-import me.earth.phobot.pathfinder.render.RenderableAlgorithm;
-import me.earth.phobot.pathfinder.util.CancellableTask;
 import me.earth.phobot.pathfinder.util.Cancellation;
 import me.earth.phobot.util.math.PositionUtil;
 import me.earth.phobot.util.mutables.MutPos;
@@ -44,7 +42,7 @@ import java.util.List;
 @Getter
 @Setter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class MovementPathfindingAlgorithm implements RenderableAlgorithm<MovementNode>, CancellableTask<Algorithm.@Nullable Result<MovementNode>> {
+public class MovementPathfindingAlgorithm implements Algorithm<MovementNode> {
     /**
      * @see MovementPathfindingAlgorithm#noMoveUpdates
      */

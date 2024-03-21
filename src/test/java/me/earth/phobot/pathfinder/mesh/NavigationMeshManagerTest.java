@@ -18,6 +18,8 @@ import net.minecraft.world.level.block.Blocks;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.PriorityQueue;
+import java.util.Queue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -83,14 +85,17 @@ public class NavigationMeshManagerTest {
 
     public static void setupMeshForBlockStateLevelMap(BlockStateLevel.Delegating level, NavigationMeshManager navigationMeshManager) {
         BlockableEventLoop<Runnable> eventLoop = new BlockableEventLoopImpl();
+        Queue<BlockPos> queue = new PriorityQueue<>(); // <- BlockPos compares by y, lowest first, which is just right for GraphTasks!
+        queue.addAll(level.getMap().keySet());
         MeshTask task = new MeshTask(navigationMeshManager.getMap(), eventLoop, level, new MutPos(), navigationMeshManager, new ChunkWorker(), 0, 0, 0, 0, 0, 0) {
             @Override
             public void execute() {
-                for (BlockPos pos : level.getMap().keySet()) {
-                    getPos().set(pos);
-                    calc(getPos());
+                while (!queue.isEmpty()) {
+                    BlockPos pos = queue.poll();
                     getPos().set(pos.getX(), pos.getY() + 1, pos.getZ());
-                    calc(getPos());
+                    if (!navigationMeshManager.getMap().containsKey(getPos())) {
+                        calc(getPos());
+                    }
                 }
             }
         };

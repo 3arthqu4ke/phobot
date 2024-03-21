@@ -45,7 +45,8 @@ public class GotoCommand extends AbstractPhobotCommand {
                     BlockPos pos = BlockPos.containing(vec3);
                     MeshNode goal = phobot.getNavigationMeshManager().getMap().values().stream().min(Comparator.comparingDouble(n -> n.distanceSq(pos))).orElse(null);
                     if (goal != null) {
-                        pingBypass.getChat().send(Component.literal("Going from  to " + PositionUtil.toSimpleString(goal)));
+                        pingBypass.getChat().send(
+                                Component.literal("Going from " + PositionUtil.toSimpleString(player.blockPosition()) + " to " + PositionUtil.toSimpleString(goal)));
                         var pathFuture = phobot.getPathfinder().findPath(player, goal, true);
                         pathFuture.whenComplete((result,t) -> {
                             synchronized (lock) {

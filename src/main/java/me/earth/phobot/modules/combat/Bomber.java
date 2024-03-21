@@ -231,8 +231,10 @@ public class Bomber extends BlockPlacingModule {
             }
         }
 
-        if (!autoCrystal.isEnabled() && autoCrystal.obbyPos() != null) {
-            autoCrystal.updatePlacements(context, player, clientLevel, gameMode);
+        if (!autoCrystal.isEnabled()) {
+            if ((autoCrystal.obbyPos() != null || autoCrystal.rotationAction() != null)) {
+                autoCrystal.updatePlacements(context, player, clientLevel, gameMode);
+            }
         }
     }
 
