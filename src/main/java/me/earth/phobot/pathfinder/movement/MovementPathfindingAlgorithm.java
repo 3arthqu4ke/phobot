@@ -42,7 +42,7 @@ import java.util.List;
 @Getter
 @Setter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class MovementPathfindingAlgorithm implements Algorithm<MovementNode> {
+public class MovementPathfindingAlgorithm extends MovementAlgorithmState implements Algorithm<MovementNode> {
     /**
      * @see MovementPathfindingAlgorithm#noMoveUpdates
      */
@@ -58,18 +58,9 @@ public class MovementPathfindingAlgorithm implements Algorithm<MovementNode> {
     private Collection<MobEffectInstance> effects;
     private MovementNode start;
     private MovementNode goal;
-    private MovementNode currentMove;
-    private MovementNode currentRender;
-    /**
-     * It can happen that during an update we hit the next MeshNode without even having to produce a new MovementNode.
-     * Especially at the start, where we want to get to MeshNode 0, this is a problem. This variable tracks the
-     * number of such updates and then updates the targetNodeIndex accordingly, so we target further MeshNodes.
-     */
-    private int noMoveUpdates;
-    /**
-     * If > 0, we will walk for this amount of ticks and not bunnyhop.
-     */
-    private int walkTicks;
+
+    private double bhopDistanceSq;
+    private boolean acceptOtherMeshNodesReached;
 
     /**
      * Constructs a new MovementPathfindingAlgorithm.
@@ -83,7 +74,7 @@ public class MovementPathfindingAlgorithm implements Algorithm<MovementNode> {
      */
     public MovementPathfindingAlgorithm(Phobot phobot, ClientLevel level, Path<MeshNode> path, @Nullable Player player, @Nullable MovementNode start, @Nullable MovementNode goal) {
         this(phobot, level, path, new MovementPlayer(level), phobot.getPingBypass().getModuleManager().getByClass(FastFall.class).orElseGet(() -> new FastFall(phobot, null)),
-             player == null ? Collections.emptyList() : new ArrayList<>(player.getActiveEffects()), start, goal, null, null, 0, 0);
+             player == null ? Collections.emptyList() : new ArrayList<>(player.getActiveEffects()), start, goal, Double.MAX_VALUE, true);
         init(player);
     }
 
@@ -198,41 +189,59 @@ public class MovementPathfindingAlgorithm implements Algorithm<MovementNode> {
                 }
             }
 
-            log.error("Failed to move towards next " + meshNode);
+            log.debug("Failed to move towards next " + meshNode);
             return false;
         }
 
         return true;
     }
 
-    private boolean bunnyHopTowardsTarget() {
+    protected boolean bunnyHopTowardsTarget() {
+        int start = path.getPath().size() - 1;
+        int end = (currentMove.isStart() ? -1 : Math.max(0, currentMove.targetNodeIndex()));
+        return bunnyHopTowardsTarget(start, end, false);
+    }
+
+    protected boolean bunnyHopTowardsTarget(int start, int end, boolean increment) {
         log.debug("Current state: " + currentMove.state());
         // we go through all MeshNodes and check if we can reach them using a bunny hop jump.
         //                                                                    v start node could be before the start mesh node
-        for (int i = path.getPath().size() - 1; i > (currentMove.isStart() ? -1 : Math.max(0, currentMove.targetNodeIndex())); i--) {
-            MeshNode meshNode = path.getPath().get(i);
-            boolean isGoal = i == path.getPath().size() - 1;
-            double x = isGoal ? goal.getX() : meshNode.getX() + 0.5;
-            double y = isGoal ? goal.getY() : PositionUtil.getMaxYAtPosition(mutPos.set(meshNode.getX(), meshNode.getY() - 1, meshNode.getZ()), level);
-            double z = isGoal ? goal.getZ() : meshNode.getZ() + 0.5;
-            // TODO: here we need at least a distance threshold, because right now this might find a straight path to any meshnode, even ones that are 100 blocks away
-            //  which is actually not that bad of a thing? But will cost lots of computational power
-            // TODO: optimize, do not bunnyhop for long falls?
-            if (currentMove.isStart() || i > currentMove.targetNodeIndex()) {
-                // we can reach this MeshNode from our current position, attempt to move towards it
-                if (moveTowards(x, y, z, isGoal, i, false)) {
-                    log.debug("Successfully bunny hopped towards " + meshNode);
-                    return true;
-                } else {
-                    currentMove.apply(player);
-                }
+        for (int i = start; increment ? i < end : i > end; i = increment ? i + 1 : i - 1) {
+            if (bunnyHopTowards(i)) {
+                return true;
             }
         }
 
         return false;
     }
 
-    private boolean strafeTowards(MeshNode meshNode, int targetNodeIndex) {
+    protected boolean bunnyHopTowards(int i) {
+        MeshNode meshNode = path.getPath().get(i);
+        boolean isGoal = i == path.getPath().size() - 1;
+        double x = isGoal ? goal.getX() : meshNode.getX() + 0.5;
+        double y = isGoal ? goal.getY() : PositionUtil.getMaxYAtPosition(mutPos.set(meshNode.getX(), meshNode.getY() - 1, meshNode.getZ()), level);
+        double z = isGoal ? goal.getZ() : meshNode.getZ() + 0.5;
+        // TODO: here we need at least a distance threshold, because right now this might find a straight path to any meshnode, even ones that are 100 blocks away
+        //  which is actually not that bad of a thing? But will cost lots of computational power
+        // TODO: optimize, do not bunnyhop for long falls?
+        if (currentMove.distanceSq(x, y, z) > bhopDistanceSq) { // TODO: y should not be taken into account actually!
+            return false;
+        }
+
+        if (currentMove.isStart() || i > currentMove.targetNodeIndex()) {
+            // we can reach this MeshNode from our current position, attempt to move towards it
+            if (moveTowards(x, y, z, isGoal, i, false)) {
+                log.debug("Successfully bunny hopped towards " + meshNode);
+                return true;
+            } else {
+                currentMove.apply(player);
+            }
+        }
+
+        return false;
+    }
+
+    protected boolean strafeTowards(MeshNode meshNode, int targetNodeIndex) {
         boolean isGoal = targetNodeIndex == path.getPath().size() - 1;
         return moveTowards(
                 isGoal ? goal.getX() : meshNode.getX() + 0.5,
@@ -241,122 +250,27 @@ public class MovementPathfindingAlgorithm implements Algorithm<MovementNode> {
                 isGoal, targetNodeIndex, true);
     }
 
-    private boolean moveTowards(double x, double y, double z, boolean isGoal, int targetNodeIndex, boolean strafe) {
-        int walkTicksLeft = walkTicks;
-        // The horizontal direction to move towards the target x and z from our current position.
-        Vec3 initialDelta = new Vec3(x - currentMove.getX(), 0.0, z - currentMove.getZ()).normalize();
+    protected boolean moveTowards(double x, double y, double z, boolean isGoal, int targetNodeIndex, boolean strafe) {
+        initializeMove(x, y, z, isGoal, targetNodeIndex, strafe);
+        return move();
+    }
 
-        MovementNode firstJump = null;
-        MovementNode currentJump = currentMove;
-        MovementNode lastJump = null;
-        MovementNode tenthLast = null;
-
-        double prevDistance = currentJump.distanceSq(x, y, z);
-        int movedAwayCount = 0;
-        int sameCount = 0;
+    protected boolean move() {
         while (currentJump != null) {
-            // We have not moved, might have gotten stuck somewhere
-            if (lastJump != null && currentJump.positionEquals(lastJump)) {
-                log.debug("Position equals! " + initialDelta + ", horizontal collision: " + player.horizontalCollision);
-                sameCount++;
-                // TODO: check if this makes sense?
-                if (sameCount > 1) { // allow one tick of position being the same, this could be because we are waiting for collision etc.?
-                    log.debug("SameCount: " + x + ", " + y + ", " + z + " from " + currentJump + " the current " + currentJump + " is the same as " + lastJump);
-                    currentJump = null;
-                    break;
-                }
-            } else {
-                sameCount = 0;
-            }
-
-            if (currentJump.isGoal()) {
-                break;
-            }
-
-            if (!isGoal && currentJump.onGround()) {
-                // We have reached the current MeshNode
-                if (Math.abs(currentJump.getX() - x) <= 0.5 && Math.abs(currentJump.getZ() - z) <= 0.5 && Math.abs(currentJump.getY() - y) <= 0.5) {
-                    if (currentJump.isStart() && targetNodeIndex == 0) {
-                        // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                        // TODO: does this make sense? Why would we do this?
-                        //  especially with the new noMoveUpdates????
-                        return false;
-                    }
-
-                    log.debug("Reached node " + targetNodeIndex + " at " + x + ", " + y + ", " + z);
-                    break;
+            Boolean update = moveTick();
+            if (update != null) {
+                if (!update) {
+                    return false;
                 } else {
-                    // Check if we have reached another MeshNode instead
-                    boolean found = false;
-                    for (int i = targetNodeIndex + 1; i < Math.min(path.getPath().size() - 1, targetNodeIndex + 4); i++) {
-                        MeshNode otherMeshNode = path.getPath().get(i);
-                        double otherX = otherMeshNode.getX() + 0.5;
-                        double otherY = PositionUtil.getMaxYAtPosition(mutPos.set(otherMeshNode.getX(), otherMeshNode.getY() - 1, otherMeshNode.getZ()), level);
-                        double otherZ = otherMeshNode.getZ() + 0.5;
-                        if (Math.abs(currentJump.getX() - otherX) <= 0.5 && Math.abs(currentJump.getZ() - otherZ) <= 0.5 && Math.abs(currentJump.getY() - otherY) <= 0.5 && i > currentMove.targetNodeIndex()) {
-                            log.debug("Failed to reach " + targetNodeIndex + " but reached " + i + " instead!");
-                            currentJump.targetNodeIndex(i);
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    if (found) {
-                        break;
-                    }
-                }
-            }
-
-            // If we have moved away from our target node too many times it means we passed it and are running off in the wrong direction
-            double distance = currentJump.distanceSq(x, y, z);
-            if (distance > prevDistance) {
-                movedAwayCount++;
-                if (movedAwayCount > 10) {
-                    log.debug("Moved away from " + x + ", " + y + ", " + z + " ten times!");
-                    currentJump = null;
                     break;
                 }
-            } else {
-                movedAwayCount = 0;
-            }
-
-            prevDistance = distance;
-            int ith = 10;
-            tenthLast = tenthLast == null ? getIthLastNodeExceptCurrentMove(currentJump, ith) : tenthLast.next();
-            // If we have not moved away more than 1 block from the position we were in 10 movements ago, we are stuck
-            if (tenthLast != null && tenthLast.distanceSq(currentJump) <= 1.0) {
-                log.debug("Got stuck on " + currentJump);
-                currentJump = null;
-                break;
-            }
-
-            // Vector we need to move towards the targeted MeshNode
-            Vec3 delta = new Vec3(x - currentJump.getX(), 0.0, z - currentJump.getZ());
-            log.debug("Delta: " + delta);
-            boolean normalize = true;
-            boolean strafeFall = false;
-            // We can move towards the target in just one tick
-            if (delta.lengthSqr() <= Mth.square(phobot.getMovementService().getMovement().getSpeed(player))) {
-                if (isGoal || strafe && !currentJump.onGround() && Math.abs(currentJump.getY() - y) > 1.0) {// about to hit goal, or falling down
-                    normalize = false; // just center us when falling down
-                } else if (strafe && currentJump.onGround() && currentJump.getY() > y) {// avoids getting stuck on cc spawn
-                    strafeFall = true; // TODO: kinda forgot what this was for... I assume is has something to do with falling down to the side of the spawn?
-                }
-            }
-
-            delta = normalize ? (strafe && !strafeFall ? delta.normalize() : initialDelta) : delta;
-            log.debug("Delta after transform: " + delta + ", " + isGoal + ", distance to goal: " + currentJump.distance(goal) + ", " + currentJump.getY() + " vs " + goal.getY());
-            lastJump = currentJump;
-            currentJump = move(currentJump, targetNodeIndex, new Vec3(delta.x, player.getDeltaMovement().y, delta.z), walkTicksLeft > 0 || strafe, normalize);
-            if (currentJump != lastJump) {
-                walkTicksLeft = Math.max(0, walkTicksLeft - 1);
-            }
-
-            if (firstJump == null) {
-                firstJump = currentJump;
             }
         }
 
+        return postMoveTick();
+    }
+
+    protected boolean postMoveTick() {
         if (currentJump != null) {
             if (currentJump == currentMove) {
                 noMoveUpdates++;
@@ -378,6 +292,108 @@ public class MovementPathfindingAlgorithm implements Algorithm<MovementNode> {
 
         log.debug("Current Jump == null");
         return false;
+    }
+
+    protected @Nullable Boolean moveTick() {
+        // We have not moved, might have gotten stuck somewhere
+        if (lastJump != null && currentJump.positionEquals(lastJump)) {
+            log.debug("Position equals! " + initialDelta + ", horizontal collision: " + player.horizontalCollision);
+            sameCount++;
+            // TODO: check if this makes sense?
+            if (sameCount > 1) { // allow one tick of position being the same, this could be because we are waiting for collision etc.?
+                log.debug("SameCount: " + x + ", " + y + ", " + z + " from " + currentJump + " the current " + currentJump + " is the same as " + lastJump);
+                return false;
+            }
+        } else {
+            sameCount = 0;
+        }
+
+        if (currentJump.isGoal()) {
+            return true;
+        }
+
+        if (!isGoal && currentJump.onGround()) {
+            // We have reached the current MeshNode
+            if (Math.abs(currentJump.getX() - x) <= 0.5 && Math.abs(currentJump.getZ() - z) <= 0.5 && Math.abs(currentJump.getY() - y) <= 0.5) {
+                if (currentJump.isStart() && targetNodeIndex == 0) {
+                    // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    // TODO: does this make sense? Why would we do this?
+                    //  especially with the new noMoveUpdates????
+                    return false;
+                }
+
+                log.debug("Reached node " + targetNodeIndex + " at " + x + ", " + y + ", " + z);
+                return true;
+            } else if (acceptOtherMeshNodesReached) {
+                // Check if we have reached another MeshNode instead
+                boolean found = false;
+                for (int i = targetNodeIndex + 1; i < Math.min(path.getPath().size() - 1, targetNodeIndex + 4); i++) {
+                    MeshNode otherMeshNode = path.getPath().get(i);
+                    double otherX = otherMeshNode.getX() + 0.5;
+                    double otherY = PositionUtil.getMaxYAtPosition(mutPos.set(otherMeshNode.getX(), otherMeshNode.getY() - 1, otherMeshNode.getZ()), level);
+                    double otherZ = otherMeshNode.getZ() + 0.5;
+                    if (Math.abs(currentJump.getX() - otherX) <= 0.5 && Math.abs(currentJump.getZ() - otherZ) <= 0.5 && Math.abs(currentJump.getY() - otherY) <= 0.5 && i > currentMove.targetNodeIndex()) {
+                        log.debug("Failed to reach " + targetNodeIndex + " but reached " + i + " instead!");
+                        currentJump.targetNodeIndex(i);
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (found) {
+                    return true;
+                }
+            }
+        }
+
+        // If we have moved away from our target node too many times it means we passed it and are running off in the wrong direction
+        double distance = currentJump.distanceSq(x, y, z);
+        if (distance > prevDistance) {
+            movedAwayCount++;
+            if (movedAwayCount > 10) {
+                log.debug("Moved away from " + x + ", " + y + ", " + z + " ten times!");
+                return false;
+            }
+        } else {
+            movedAwayCount = 0;
+        }
+
+        prevDistance = distance;
+        int ith = 10;
+        tenthLast = tenthLast == null ? getIthLastNodeExceptCurrentMove(currentJump, ith) : tenthLast.next();
+        // If we have not moved away more than 1 block from the position we were in 10 movements ago, we are stuck
+        if (tenthLast != null && tenthLast.distanceSq(currentJump) <= 1.0) {
+            log.debug("Got stuck on " + currentJump);
+            return false;
+        }
+
+        // Vector we need to move towards the targeted MeshNode
+        Vec3 delta = new Vec3(x - currentJump.getX(), 0.0, z - currentJump.getZ());
+        log.debug("Delta: " + delta);
+        boolean normalize = true;
+        boolean strafeFall = false;
+        // We can move towards the target in just one tick
+        if (delta.lengthSqr() <= Mth.square(phobot.getMovementService().getMovement().getSpeed(player))) {
+            if (isGoal || strafe && !currentJump.onGround() && Math.abs(currentJump.getY() - y) > 1.0) {// about to hit goal, or falling down
+                normalize = false; // just center us when falling down
+            } else if (strafe && currentJump.onGround() && currentJump.getY() > y) {// avoids getting stuck on cc spawn
+                strafeFall = true; // TODO: kinda forgot what this was for... I assume is has something to do with falling down to the side of the spawn?
+            }
+        }
+
+        delta = normalize ? (strafe && !strafeFall ? delta.normalize() : initialDelta) : delta;
+        log.debug("Delta after transform: " + delta + ", " + isGoal + ", distance to goal: " + currentJump.distance(goal) + ", " + currentJump.getY() + " vs " + goal.getY());
+        lastJump = currentJump;
+        currentJump = move(currentJump, targetNodeIndex, new Vec3(delta.x, player.getDeltaMovement().y, delta.z), walkTicksLeft > 0 || strafe, normalize);
+        if (currentJump != lastJump) {
+            walkTicksLeft = Math.max(0, walkTicksLeft - 1);
+        }
+
+        if (firstJump == null) {
+            firstJump = currentJump;
+        }
+
+        return null;
     }
 
     /**

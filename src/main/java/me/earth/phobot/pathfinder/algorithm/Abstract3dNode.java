@@ -4,9 +4,10 @@ import lombok.Data;
 import me.earth.phobot.util.math.MathUtil;
 import net.minecraft.core.Position;
 import net.minecraft.core.SectionPos;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 
-// TODO: implement equals with EPSILON leniency?!?!?!?!?!?!?!?!?!?!?!?!
+// TODO: implement equals with EPSILON?!?!?!?!?!?!?!?!?!?!?!?!
 @Data
 public abstract class Abstract3dNode<N extends Abstract3dNode<N>> implements PathfindingNode<N>, Position {
     private final double x;
@@ -70,6 +71,15 @@ public abstract class Abstract3dNode<N extends Abstract3dNode<N>> implements Pat
 
     public boolean positionEquals(@NotNull Position position) {
         return positionCompare(position) == 0;
+    }
+
+    public int positionHashCode() {
+        long l = Double.doubleToLongBits(this.x);
+        int i = (int)(l ^ l >>> 32);
+        l = Double.doubleToLongBits(this.y);
+        i = 31 * i + (int)(l ^ l >>> 32);
+        l = Double.doubleToLongBits(this.z);
+        return 31 * i + (int)(l ^ l >>> 32);
     }
 
     public int positionCompare(@NotNull Position position) {

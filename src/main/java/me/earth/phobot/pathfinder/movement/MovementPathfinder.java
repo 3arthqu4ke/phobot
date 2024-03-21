@@ -303,6 +303,7 @@ public class MovementPathfinder extends SubscriberImpl {
                     MeshNode.class
             );
 
+            log.info(path.getPath().get(0) + " to " + path.getPath().get(path.getPath().size() - 1));
             MovementPathfindingAlgorithm algorithm = new MovementPathfindingAlgorithm(phobot, level, path, player, start, null);
             log.info("Starting MovementPathfinder on " + player.position() + ", start: " + start + ", algorithm start: " + algorithm.getStart() + ", algo pos: " + algorithm.getPlayer().position());
             // TODO: keep lagbacks and laggedThisTick?

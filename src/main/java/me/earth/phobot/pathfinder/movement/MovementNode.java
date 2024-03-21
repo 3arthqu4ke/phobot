@@ -45,7 +45,6 @@ public class MovementNode extends Abstract3dNode<MovementNode> {
      * @see MovementPlayer#setMoveCallback(Function)
      */
     private final Vec3 deltaReturnedForMoveEvent;
-
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private @Nullable MovementNode goal;
@@ -55,7 +54,7 @@ public class MovementNode extends Abstract3dNode<MovementNode> {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private @Nullable MovementNode next;
-
+    @EqualsAndHashCode.Exclude
     private int targetNodeIndex;
 
     public MovementNode(Player player, Movement.State state, @Nullable MovementNode goal, int targetNodeIndex) {
@@ -109,6 +108,8 @@ public class MovementNode extends Abstract3dNode<MovementNode> {
             return deltaReturnedForMoveEvent;
         };
     }
+
+
 
     public static MovementNode createGoalNode(Path<MeshNode> path, Vec3 gravity) {
         return new MovementNode(path.getExactGoal(), new Movement.State(), null, dummy(path.getExactGoal(), gravity), path.getPath().size() - 1, gravity, gravity);

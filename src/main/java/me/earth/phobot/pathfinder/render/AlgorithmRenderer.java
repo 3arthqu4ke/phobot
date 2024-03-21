@@ -13,6 +13,7 @@ import me.earth.pingbypass.api.event.listeners.generic.Listener;
 
 import java.awt.*;
 
+// TODO: this does not really seem to work anymore on the pooled A*, is it just too fast lol?
 /**
  * Renders {@link RenderableAlgorithm}s.
  *
