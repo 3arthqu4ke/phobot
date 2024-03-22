@@ -39,7 +39,7 @@ public class Roaming extends Behaviour {
                 && !pathSearchManager.isSearching()
                 && !phobot.getPathfinder().isFollowingPath()
                 && !bot.getJumpDownFromSpawn().isAboveSpawn(player)
-                && level.players().stream().filter(p -> !bot.getJumpDownFromSpawn().isAboveSpawn(p)).noneMatch(p -> p != player)) {
+                && level.players().stream().filter(p -> !bot.getJumpDownFromSpawn().isAboveSpawn(p) && !pingBypass.getFriendManager().contains(p.getUUID())).noneMatch(p -> p != player)) {
             if (player.distanceToSqr(0.0, player.getY(), 0.0) > 40_000.0 && !bot.isDueling() && bot.getSuicide().getValue()) { // further than 200 blocks away from spawn, why go back
                 bot.getModules().getSuicide().enable();
             } else {
