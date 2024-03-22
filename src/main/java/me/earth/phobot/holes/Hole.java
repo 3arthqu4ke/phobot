@@ -93,6 +93,10 @@ public final class Hole implements CanBeInvalidated {
         return entity.distanceToSqr(getX() + (getMaxX() - getX()) / 2.0, getY(), getZ() + (getMaxZ() - getZ()) / 2.0);
     }
 
+    public double getDistanceSqr(Vec3 position) {
+        return position.distanceToSqr(getX() + (getMaxX() - getX()) / 2.0, getY(), getZ() + (getMaxZ() - getZ()) / 2.0);
+    }
+
     /**
      * @return the one, two or four blocks that form the actual hole.
      */

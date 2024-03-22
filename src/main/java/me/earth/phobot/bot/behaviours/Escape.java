@@ -19,6 +19,7 @@ import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
 import java.util.Optional;
@@ -46,8 +47,8 @@ public class Escape extends Behaviour {
                     phobot.getInventoryService().use(context -> {
                         Item item = context.find(Items.CHORUS_FRUIT);
                         if (item == null) {
-                            pingBypass.getChat().delete("AutoEat");
-                            pingBypass.getChat().send(Component.literal("AutoEat could not find Chorus Fruit!").withStyle(ChatFormatting.RED), "Chorus Fruit");
+                            pingBypass.getChat().delete("EscapeChorus");
+                            pingBypass.getChat().sendWithoutLogging(Component.literal("AutoEat could not find Chorus Fruit!").withStyle(ChatFormatting.RED), "EscapeChorus");
                         } else {
                             int flags = InventoryContext.PREFER_MAINHAND | InventoryContext.SET_CARRIED_ITEM;
                             if (bot.getModules().getKillAura().isEnabled()
@@ -104,12 +105,7 @@ public class Escape extends Behaviour {
         } else if (meshNode.get().distanceSqToCenter(player.getX(), player.getY(), player.getZ()) >= 2.0 && player.onGround()) {
             trapped = true;
         } else {
-            Set<MeshNode> nodes = new HashSet<>();
-            nodes.add(meshNode.get());
-            int amountOfNodesNeededToBeNotTrapped = 6;
-            // check how many MeshNodes there are around us
-            recurseUntilSizeOfMapReaches(meshNode.get(), nodes, amountOfNodesNeededToBeNotTrapped);
-            trapped = nodes.size() < amountOfNodesNeededToBeNotTrapped;
+            trapped = isTrapped(meshNode.get());
         }
 
         if (!trapped) {
@@ -117,6 +113,19 @@ public class Escape extends Behaviour {
         } else {
             finishedGapple = finishedGapple || player.getAbsorptionAmount() >= 16.0f;
         }
+    }
+
+    public boolean isTrapped(@Nullable MeshNode targetNode) {
+        if (targetNode == null) {
+            return true;
+        }
+
+        Set<MeshNode> nodes = new HashSet<>();
+        nodes.add(targetNode);
+        int amountOfNodesNeededToBeNotTrapped = 6;
+        // check how many MeshNodes there are around us
+        recurseUntilSizeOfMapReaches(targetNode, nodes, amountOfNodesNeededToBeNotTrapped);
+        return nodes.size() < amountOfNodesNeededToBeNotTrapped;
     }
 
     private boolean recurseUntilSizeOfMapReaches(MeshNode current, Set<MeshNode> visited, int size) {

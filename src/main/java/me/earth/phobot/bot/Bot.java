@@ -19,9 +19,12 @@ import net.minecraft.world.entity.Entity;
 public class Bot extends PhobotModule implements DisplaysHudInfo {
     private final Setting<Integer> spawnHeight = number("BuildHeight", 57, -64, 320, "Above this height the bot will jump down.");
     private final Setting<Integer> parallelSearches = number("Parallel-Searches", 6, 1, 32, "The amount of path searches the bot is allowed to execute in parallel.");
+    private final Setting<Double> damageLenience = precise("Damage-Leniency", 0.0, -15.0, 15.0, "How much more or less damage we are willing to accept when jumping back into a hole.");
+    private final Setting<Double> leaveHealth = precise("Leave-Health", 15.0, 0.0, 20.0, "How much health the bot should have before leaving a hole.");
     private final Setting<Boolean> rotate = bool("Rotate", true, "Makes you look at the current target.");
     private final Setting<Boolean> duel = bool("Duel", false, "Turn on for when you want to /duel someone.");
     private final Setting<Boolean> aura = bool("Aura", true, "Uses KillAura.");
+    private final Setting<Boolean> suicide = bool("Suicide", false, "Suicides you if you are out of gear, or far away from Spawn with no enemies in sight.");
 
     private final ParallelSearchManager pathSearchManager = new ParallelSearchManager();
     private final SurroundService surroundService;

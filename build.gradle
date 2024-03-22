@@ -3,6 +3,7 @@ plugins {
 	id 'java-library'
 	id 'maven-publish'
 	id 'xyz.wagyourtail.unimined' version '1.1.1'
+	id 'idea'
 }
 
 archivesBaseName  = 'phobot'
@@ -102,10 +103,9 @@ unimined.minecraft(sourceSets.lexforge) {
 
 configurations {
 	mainImplementation
-}
 
-configurations {
-	lwjglAgent.extendsFrom runtimeOnly
+	lwjglAgent
+	runtimeOnly.extendsFrom lwjglAgent
 	runClientFabric
 	runClientLexForge
 	runClientNeoForge
@@ -253,6 +253,10 @@ test {
 	useJUnitPlatform()
 }
 
+// TODO: fabricRunClient gradle task works just fine. But the Intellij run task needs the pingbypass mod jar in the mods folder
+//  same goes for neoforge. I suspect that Intellij does not understand our gradle configuration, and does not add these jars to the classpath.
+//  makes sense since the Intellij run configuration does not have anything to do with these gradle tasks.
+//  I tried tinkering around with the idea gradle plugin, but it just does not work?!
 // Forge Runs seem to have problems running from the build/classes folder
 // So instead we just run from the built jar
 afterEvaluate {

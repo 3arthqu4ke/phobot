@@ -11,22 +11,16 @@ import net.minecraft.client.Minecraft;
 
 import java.util.concurrent.ExecutorService;
 
+@Getter
 public class Pathfinding extends PhobotNameSpacedModule implements ConfigWithMinMaxHeight {
     public static final Setting<Boolean> DEBUG = new BoolBuilder().withName("Debug").withDescription("Debugs").withValue(false).build();
 
-    @Getter
-    private final Setting<Boolean> calcAsync =
-            bool("Async", true, "Calculates Chunks asynchronously.");
-    private final Setting<Integer> maxHeight =
-            number("MaxHeight", 140, -64, 320, "Calculates pathfinding in a chunk up to this height.");
-    private final Setting<Integer> minHeight =
-            number("MinHeight", 0, -64, 320, "Calculates pathfinding in a chunk from height.");
-    @Getter
-    private final Setting<Boolean> render =
-            bool("Render", false, "Render the pathfinding graph for debugging.");
-    @Getter
-    private final Setting<Boolean> renderAlgorithm =
-            bool("Render-Algorithm", true, "Renders the pathfinding algorithm while it is running.");
+    private final Setting<Boolean> calcAsync = bool("Async", true, "Calculates Chunks asynchronously.");
+    private final Setting<Integer> maxHeight = number("MaxHeight", 140, -64, 320, "Calculates pathfinding in a chunk up to this height.");
+    private final Setting<Integer> lagTime = number("LagTime", 250, 0, 2000, "Time to wait after getting rubber-banded.");
+    private final Setting<Integer> minHeight = number("MinHeight", 0, -64, 320, "Calculates pathfinding in a chunk from height.");
+    private final Setting<Boolean> render = bool("Render", false, "Render the pathfinding graph for debugging.");
+    private final Setting<Boolean> renderAlgorithm = bool("Render-Algorithm", true, "Renders the pathfinding algorithm while it is running.");
     private final ExecutorService executor;
 
     public Pathfinding(PingBypass pingBypass, ExecutorService executor) {

@@ -15,7 +15,8 @@ public class Scaffolding extends Behaviour {
     @Override
     protected void update(LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
         // TODO: detect if pathfinding process to nearest target failed?
-
+        // TODO: Scaffolding A* + MovementPathfinder?
+        // TODO: Parkouring A* + MovementPathfinder?
     }
 
 }

@@ -279,6 +279,8 @@ public class Bomber extends BlockPlacingModule {
                 return true;
             }
 
+            // generally seems to rarely happen!
+            log.info("Failed Bomber rotations!");
             return false;
         }
 

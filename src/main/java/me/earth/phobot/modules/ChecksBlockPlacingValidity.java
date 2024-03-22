@@ -31,15 +31,24 @@ public interface ChecksBlockPlacingValidity {
         return isBlockedByEntity(pos, shapeToPlace, player, level, consumesBlockingEntities, BlockPlacer::setCrystal);
     }
 
-    default boolean isBlockedByEntity(BlockPos pos, VoxelShape shapeToPlace, Player player, ClientLevel level, Predicate<Entity> consumesBlockingEntities, BiConsumer<BlockPlacer, EndCrystal> setCrystal) {
+    default boolean isBlockedByEntity(BlockPos pos, VoxelShape shapeToPlace, Player player, ClientLevel level, Predicate<Entity> consumesBlockingEntities,
+                                      BiConsumer<BlockPlacer, EndCrystal> setCrystal) {
+        return isBlockedByEntity(pos, shapeToPlace, player, level, consumesBlockingEntities, setCrystal, true);
+    }
+
+    default boolean isBlockedByEntity(BlockPos pos, VoxelShape shapeToPlace, Player player, ClientLevel level, Predicate<Entity> consumesBlockingEntities,
+                                      BiConsumer<BlockPlacer, EndCrystal> setCrystal, boolean breakCrystals) {
         VoxelShape moved = shapeToPlace.move(pos.getX(), pos.getY(), pos.getZ());
         boolean blockedByCrystal = false;
         for (Entity entity : level.getEntities(null, moved.bounds())) {
-            if (entity.isRemoved() || !entity.blocksBuilding || !Shapes.joinIsNotEmpty(moved, Shapes.create(entity.getBoundingBox()), BooleanOp.AND) || consumesBlockingEntities.test(entity)) {
+            if (entity.isRemoved()
+                    || !entity.blocksBuilding
+                    || !Shapes.joinIsNotEmpty(moved, Shapes.create(entity.getBoundingBox()), BooleanOp.AND)
+                    || consumesBlockingEntities.test(entity)) {
                 continue;
             }
 
-            if (entity instanceof EndCrystal) {
+            if (breakCrystals && entity instanceof EndCrystal) {
                 blockedByCrystal = true;
             } else {
                 return true;

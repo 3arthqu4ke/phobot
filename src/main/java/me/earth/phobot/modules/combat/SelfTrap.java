@@ -3,7 +3,7 @@ package me.earth.phobot.modules.combat;
 import lombok.Getter;
 import me.earth.phobot.Phobot;
 import me.earth.phobot.holes.Hole;
-import me.earth.phobot.modules.BlockPlacingModule;
+import me.earth.phobot.modules.SwappingBlockPlacingModule;
 import me.earth.phobot.pathfinder.blocks.BlockPathfinder;
 import me.earth.phobot.pathfinder.blocks.BlockPathfinderWithBlacklist;
 import me.earth.phobot.services.SurroundService;
@@ -25,7 +25,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
-public class SelfTrap extends BlockPlacingModule implements TrapsPlayers, DetectsPlayerApproaching {
+public class SelfTrap extends SwappingBlockPlacingModule implements TrapsPlayers, DetectsPlayerApproaching {
     private final Setting<Integer> maxHelping = number("Helping", 3, 1, 10, "Amount of helping blocks to use.");
     private final Setting<Boolean> auto = bool("Auto", true, "Waits for a player to approach you and only then traps you.");
     private final Setting<Double> distance = precise("Distance", 2.0, 0.1, 6.0, "Distance of the target player to our position when using Auto.");

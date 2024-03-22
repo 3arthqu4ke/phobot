@@ -48,7 +48,7 @@ public class CrystalPlacingAction extends BlockPlacer.Action {
     }
 
     private CrystalPlacingAction(BlockPos immutable, CrystalPosition copy, CrystalPlacer crystalPlacer, boolean packetRotations) {
-        this(crystalPlacer.getModule(), immutable, immutable, Direction.UP, Items.END_CRYSTAL, false, false,
+        this(crystalPlacer.getModule(), immutable, immutable/*TODO: should be above?! Where the crystal will actually spawn*/, Direction.UP, Items.END_CRYSTAL, false, false,
                 packetRotations, crystalPlacer.getModule().getBlockPlacer(), false, copy, crystalPlacer);
     }
 

@@ -72,6 +72,7 @@ public class KillAura extends PhobotModule implements DisplaysHudInfo {
 
     @Override
     public String getHudInfo() {
+        // Target[entity=RemotePlayer['§9§r§9§d§e§5§n§1'/65, l='ClientLevel', x=-4.47, y=156.00, z=1.51], inRangeForCurrentPos=true, inRangeForLastPos=false, teleportPos=null]
         LocalPlayer player = mc.player;
         Target target = this.target;
         if (player != null && target != null && target.entity() != null) {

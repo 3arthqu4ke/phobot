@@ -14,6 +14,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.HashSet;
 import java.util.Set;
 
+// TODO: this could potentially need some improvements?
 @Getter
 public class RunningAway extends Behaviour {
     private final Set<Object> runningAwayRequests = new HashSet<>();

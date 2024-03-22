@@ -62,7 +62,7 @@ public class Rotate extends SubscriberImpl {
                         vec.normalize();
                         vec.scale(player.getEyeHeight());
                         double x = Mth.lerp(mc.getFrameTime(), player.xo + vec.getX(), player.getX() + vec.getX());
-                        double y = Mth.lerp(mc.getFrameTime(), player.yo + vec.getY(), player.getY() + vec.getY());
+                        double y = Mth.lerp(mc.getFrameTime(), player.yo, player.getY());
                         double z = Mth.lerp(mc.getFrameTime(), player.zo + vec.getZ(), player.getZ() + vec.getZ());
                         float[] rotations = RotationUtil.getLerpRotations(mc, player, x, y, z);
                         player.setYRot(rotations[0]);

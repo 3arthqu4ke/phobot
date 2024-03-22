@@ -50,14 +50,15 @@ public class JumpDownFromSpawn extends Behaviour {
         if (player.getY() >= bot.getSpawnHeight().getValue()) {
             if (!screenTimer.passed(3_000L)) {
                 double time = MathUtil.round((3_000L - screenTimer.getPassedTime()) / 1000.0, 1);
-                pingBypass.getChat().send(Component.literal("Phobot dropping in " + time + "s..."), CHAT_ID);
+                pingBypass.getChat().sendWithoutLogging(Component.literal("Phobot dropping in " + time + "s..."), CHAT_ID);
                 return;
             } else {
                 pingBypass.getChat().send(Component.literal("Dropping..."), CHAT_ID);
             }
 
             pathSearchManager.<Hole>applyForPathSearch(this, pathSearch -> {
-                phobot.getHoleManager().getMap().values().stream()
+                phobot.getHoleManager()
+                        .stream()
                         .filter(h -> h.getY() < bot.getSpawnHeight().getValue())
                         .sorted(Comparator.comparingDouble(h -> MathUtil.distance2dSq(h.getX(), h.getZ(), player.getX(), player.getZ())))
                         .map(hole -> {

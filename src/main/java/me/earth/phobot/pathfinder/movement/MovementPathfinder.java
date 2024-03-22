@@ -120,7 +120,7 @@ public class MovementPathfinder extends SubscriberImpl {
                     return;
                 }
 
-                if (!current.getTimeSinceLastLagBack().passed(250L)) {
+                if (!current.getTimeSinceLastLagBack().passed(getLagTime())) {
                     current.laggedThisTick = true;
                     return;
                 }
@@ -234,6 +234,13 @@ public class MovementPathfinder extends SubscriberImpl {
     }
 
     /**
+     * @return time to wait with moving after lagging.
+     */
+    public int getLagTime() {
+        return 250;
+    }
+
+    /**
      * @return {@code true} if this pathfinder is currently following a path.
      */
     public boolean isFollowingPath() {
@@ -270,6 +277,8 @@ public class MovementPathfinder extends SubscriberImpl {
                                                         BiConsumer<NullabilityUtil.PlayerLevelAndGameModeConsumer, Runnable> nullabilityAction,
                                                         Algorithm.Result<MeshNode> meshNodePath,
                                                         Vec3 goal) {
+        // TODO: before we follow a new path, run a MovementPathfindingAlgorithm really quick and check if that Algorithm actually reaches a MeshNode on the path?
+        //  could be necessary in case we have calculated the MeshNode path on an older player position but have since then moved and now cannot follow the new path.
         Cancellation cancellation = new Cancellation();
         CancellableFuture<Result> future = new CancellableFuture<>(cancellation);
         eventLoop.submit(() -> nullabilityAction.accept(((localPlayer, level, gameMode) -> {
@@ -285,13 +294,9 @@ public class MovementPathfinder extends SubscriberImpl {
 
             State current = this.state;
             MovementNode start = null;
-            MovementNode next = null;
             if (current != null) {
                 current.future.complete(Result.NEW_PATH);
                 start = current.currentNode;
-                if (start != null) {
-                    next = start.next();
-                }
             }
 
             Path<MeshNode> path = new Path<>(
@@ -306,15 +311,7 @@ public class MovementPathfinder extends SubscriberImpl {
             MovementPathfindingAlgorithm algorithm = new MovementPathfindingAlgorithm(phobot, level, path, player, start, null);
             log.info("Starting MovementPathfinder on " + player.position() + ", start: " + start + ", algorithm start: " + algorithm.getStart() + ", algo pos: " + algorithm.getPlayer().position());
             // TODO: keep lagbacks and laggedThisTick?
-            State state = new State(cancellation, future, new AlgorithmRenderer<>(algorithm), algorithm, path, algorithm.getStart(), false, 0);
-            if (next != null) {
-                next = new MovementNode(next, algorithm.getGoal(), 0);
-                state.currentNode.next(next);
-                state.algorithm.setCurrentRender(next);
-                state.algorithm.setCurrentMove(next);
-            }
-
-            this.state = state;
+            this.state = new State(cancellation, future, new AlgorithmRenderer<>(algorithm), algorithm, path, algorithm.getStart(), false, 0);
         }), () -> future.complete(Result.WORLD_CHANGED)));
 
         return future;

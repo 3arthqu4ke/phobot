@@ -82,6 +82,10 @@ public class BlockPlacer extends SubscriberImpl {
                         }
                     }
 
+                    if (breakCrystal(player)) {
+                        return;
+                    }
+
                     if (antiCheat.getBlockRotations().getValue() && !actions.isEmpty()
                             || antiCheat.getCrystalRotations().getValue() && actions.stream().anyMatch(Action::isCrystalAction)) {
                         boolean spoofing = motionUpdateService.spoofing;
@@ -116,14 +120,31 @@ public class BlockPlacer extends SubscriberImpl {
         inTick = true;
     }
 
-    // TODO: this needs rotations!
-    public void breakCrystal(LocalPlayer player) {
+    // TODO: make it configurable if we actually attack crystals for placing, best with a single module that can be turned on/off
+    // TODO: I am not sure I like how this is solved right now. I know its hyper optimization, but we should have a service that scans all Actions for crystals before placing
+    //  and then decides which crystal to break by also optimizing rotations, so that we can both place and break with one rotation.
+    public boolean breakCrystal(LocalPlayer player) {
         Entity crystal = this.crystal;
         if (crystal != null && !attacked) {
-            // TODO: only break crystal if the action is actually going to be executed
-            attackService.attack(player, crystal);
-            attacked = true;
+            Player rotationPlayer = localPlayerPositionService.getPlayerOnLastPosition(player);
+            if (antiCheat.getAttackRotations().getValue() && !RaytraceUtil.areRotationsLegit(rotationPlayer, crystal)) {
+                if (motionUpdateService.isInPreUpdate()) {
+                    float[] rotations = RotationUtil.getRotations(player, crystal);
+                    motionUpdateService.rotate(player, rotations[0], rotations[1]);
+                } else if (actions.stream().anyMatch(action -> action.packetRotations)) {
+                    float[] rotations = RotationUtil.getRotations(rotationPlayer, crystal);
+                    player.connection.send(new ServerboundMovePlayerPacket.Rot(rotations[0], rotations[1], rotationPlayer.onGround()));
+                    return false;
+                }
+
+                return true;
+            } else {
+                attackService.attack(player, crystal);
+                attacked = true;
+            }
         }
+
+        return false;
     }
 
     public void endTick(InventoryContext context, LocalPlayer player, ClientLevel level) {
@@ -132,7 +153,10 @@ public class BlockPlacer extends SubscriberImpl {
 
     private void endTick(InventoryContext context, LocalPlayer player, ClientLevel level, boolean clear) {
         if (!actions.isEmpty()) {
-            breakCrystal(player);
+            if (breakCrystal(player)) {
+                return;
+            }
+
             boolean shiftKey = player.isShiftKeyDown(); // TODO: better way to detect if the server knows this?!
             if (!shiftKey) {
                 // the players pose only gets updated every server tick, so this does not matter for rotations!

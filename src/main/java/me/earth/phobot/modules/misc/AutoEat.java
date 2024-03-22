@@ -50,7 +50,7 @@ public class AutoEat extends PhobotModule {
                     Item item = context.find(Items.ENCHANTED_GOLDEN_APPLE);
                     if (item == null) {
                         getPingBypass().getChat().delete("AutoEat");
-                        getPingBypass().getChat().send(Component.literal("AutoEat could not find Golden Apples!").withStyle(ChatFormatting.RED), "AutoEat");
+                        getPingBypass().getChat().sendWithoutLogging(Component.literal("AutoEat could not find Golden Apples!").withStyle(ChatFormatting.RED), "AutoEat");
                     } else {
                         int flags = InventoryContext.PREFER_MAINHAND | InventoryContext.SET_CARRIED_ITEM;
                         if (killAura.isEnabled()

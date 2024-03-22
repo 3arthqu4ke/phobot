@@ -2,7 +2,7 @@ package me.earth.phobot.modules.combat;
 
 import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
-import me.earth.phobot.modules.BlockPlacingModule;
+import me.earth.phobot.modules.SwappingBlockPlacingModule;
 import me.earth.phobot.services.BlockDestructionService;
 import me.earth.phobot.services.inventory.InventoryContext;
 import me.earth.phobot.util.math.PositionUtil;
@@ -23,7 +23,7 @@ import net.minecraft.world.level.block.state.BlockState;
 // TODO: use bomber to check if they can place?
 // TODO: bypass strictdirection, by sending packets for a jump we can jump and then place (probably blocked by grim)
 @Slf4j
-public class Blocker extends BlockPlacingModule {
+public class Blocker extends SwappingBlockPlacingModule {
     private final Setting<Integer> ticks = number("Ticks", 3, 0, 10, "We predict when a player will break a block around us and block it this many ticks before.");
     private final Surround surround;
 

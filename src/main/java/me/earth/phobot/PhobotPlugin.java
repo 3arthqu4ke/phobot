@@ -89,7 +89,7 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
 
         TaskService taskService = subscribe(unloadingService, new TaskService(pingBypass.getMinecraft()));
         Pathfinder pathfinder = subscribe(unloadingService,
-                new Pathfinder(pingBypass, unloadingService.getEventBus(), navigationMeshManager, executor, taskService, pathfinding.getRenderAlgorithm()));
+                new Pathfinder(pingBypass, unloadingService.getEventBus(), navigationMeshManager, executor, taskService, pathfinding));
 
         ServerService serverService = subscribe(unloadingService, new ServerService());
         AntiCheat antiCheat = new AntiCheat(pingBypass, serverService);
@@ -129,7 +129,6 @@ public class PhobotPlugin extends AbstractUnloadablePlugin {
     private void registerModules(PingBypass pingBypass, Phobot phobot, PluginUnloadingService unloadingService) {
         unloadingService.registerAddOn(new NotificationAddOn(phobot));
 
-        unloadingService.registerModule(new PacketSpam(pingBypass));
         unloadingService.registerModule(new Packets(pingBypass));
         unloadingService.registerModule(new Reach(pingBypass));
         unloadingService.registerModule(new Debug(phobot));

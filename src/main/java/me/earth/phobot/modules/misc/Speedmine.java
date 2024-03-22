@@ -225,6 +225,12 @@ public class Speedmine extends PhobotModule implements DisplaysHudInfo {
 
     @Override
     public String getHudInfo() {
+        LocalPlayer player = mc.player;
+        ClientLevel level = mc.level;
+        if (player != null && level != null && currentPos != null) {
+            return getTimeLeftMS(player, level) + "ms";
+        }
+
         return null;
     }
 

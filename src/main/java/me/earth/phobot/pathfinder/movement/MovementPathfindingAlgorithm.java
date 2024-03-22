@@ -69,7 +69,7 @@ public class MovementPathfindingAlgorithm implements Algorithm<MovementNode> {
     /**
      * If > 0, we will walk for this amount of ticks and not bunnyhop.
      */
-    private int walkTicks;
+    private int walkTicks; // TODO: investigate, saw it walking for a large distance after rubber-banding a bit?!
 
     /**
      * Constructs a new MovementPathfindingAlgorithm.
@@ -155,12 +155,14 @@ public class MovementPathfindingAlgorithm implements Algorithm<MovementNode> {
     public boolean update() {
         assert currentMove != null;
         currentMove.apply(player);
+        log.info("Walkticks: " + walkTicks);
         // we prefer walking towards the goal if we are close to it
         boolean preferWalking = currentMove.distanceSq(goal) < 6.25/* 2.5 ^ 2 */;
         if (!preferWalking && bunnyHopTowardsTarget()) { // attempt to bunny hop towards the target
             return true;
         }
 
+        log.warn("Strafing to goal instead?! " + walkTicks);
         // We did not manage to reach a new node by bunny hopping, now we use normal walking (strafing).
         // For strafing we only check the next MeshNode in the path, because it is closest and strafing is just a direct line.
 
@@ -241,7 +243,7 @@ public class MovementPathfindingAlgorithm implements Algorithm<MovementNode> {
                 isGoal, targetNodeIndex, true);
     }
 
-    private boolean moveTowards(double x, double y, double z, boolean isGoal, int targetNodeIndex, boolean strafe) {
+    private boolean moveTowards(double x, double y, double z, boolean isGoal, int targetNodeIndex, boolean strafeIn) {
         int walkTicksLeft = walkTicks;
         // The horizontal direction to move towards the target x and z from our current position.
         Vec3 initialDelta = new Vec3(x - currentMove.getX(), 0.0, z - currentMove.getZ()).normalize();
@@ -255,6 +257,8 @@ public class MovementPathfindingAlgorithm implements Algorithm<MovementNode> {
         int movedAwayCount = 0;
         int sameCount = 0;
         while (currentJump != null) {
+            boolean strafe = strafeIn || walkTicksLeft > 0;
+
             // We have not moved, might have gotten stuck somewhere
             if (lastJump != null && currentJump.positionEquals(lastJump)) {
                 log.debug("Position equals! " + initialDelta + ", horizontal collision: " + player.horizontalCollision);
@@ -347,7 +351,7 @@ public class MovementPathfindingAlgorithm implements Algorithm<MovementNode> {
             delta = normalize ? (strafe && !strafeFall ? delta.normalize() : initialDelta) : delta;
             log.debug("Delta after transform: " + delta + ", " + isGoal + ", distance to goal: " + currentJump.distance(goal) + ", " + currentJump.getY() + " vs " + goal.getY());
             lastJump = currentJump;
-            currentJump = move(currentJump, targetNodeIndex, new Vec3(delta.x, player.getDeltaMovement().y, delta.z), walkTicksLeft > 0 || strafe, normalize);
+            currentJump = move(currentJump, targetNodeIndex, new Vec3(delta.x, player.getDeltaMovement().y, delta.z), strafe, normalize);
             if (currentJump != lastJump) {
                 walkTicksLeft = Math.max(0, walkTicksLeft - 1);
             }

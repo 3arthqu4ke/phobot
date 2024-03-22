@@ -118,7 +118,7 @@ public class XCarry extends PhobotModule {
 
     private boolean antiCheatRequiresClose() {
         if (phobot.getAntiCheat().getCloseInv().getValue()) {
-            mc.submit(() -> getPingBypass().getChat().send(Component.literal("XCarry is enabled, but won't work due to AntiCheat - CloseInventory."), "XCarry"));
+            mc.submit(() -> getPingBypass().getChat().sendWithoutLogging(Component.literal("XCarry is enabled, but won't work due to AntiCheat - CloseInventory."), "XCarry"));
             return true;
         }
 

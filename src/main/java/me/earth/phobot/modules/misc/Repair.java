@@ -35,7 +35,7 @@ public class Repair extends PhobotModule {
 
     public Repair(Phobot phobot, SurroundService surroundService) {
         super(phobot, "Repair", Categories.MISC, "Tweaks for mending.");
-        listen(new SafeListener<PreMotionPlayerUpdateEvent>(mc, 999) {
+        listen(new SafeListener<PreMotionPlayerUpdateEvent>(mc, -1000/*after KILLAURA!!!*/) {
             @Override
             public void onEvent(PreMotionPlayerUpdateEvent event, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
                 throwing = false;

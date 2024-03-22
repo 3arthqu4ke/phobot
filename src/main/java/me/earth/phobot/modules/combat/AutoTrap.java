@@ -3,6 +3,7 @@ package me.earth.phobot.modules.combat;
 import lombok.Getter;
 import me.earth.phobot.Phobot;
 import me.earth.phobot.modules.BlockPlacingModule;
+import me.earth.phobot.modules.SwappingBlockPlacingModule;
 import me.earth.phobot.pathfinder.blocks.BlockPathfinder;
 import me.earth.phobot.pathfinder.blocks.BlockPathfinderWithBlacklist;
 import me.earth.phobot.services.SurroundService;
@@ -25,7 +26,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
-public class AutoTrap extends BlockPlacingModule implements TrapsPlayers {
+public class AutoTrap extends SwappingBlockPlacingModule implements TrapsPlayers {
     private final Setting<PacketRotationMode> packetRotations = constant("PacketRotations", PacketRotationMode.None, "Sends additional packets to rotate, might lag back," +
             "but allows you to place more blocks in one tick. With Mode Surrounded this will only happen when you are surrounded, so that you do not have to worry about lagbacks.");
     private final Setting<Integer> maxHelping = number("Helping", 3, 1, 10, "Amount of helping blocks to use.");

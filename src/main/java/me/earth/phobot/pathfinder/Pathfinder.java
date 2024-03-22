@@ -3,6 +3,7 @@ package me.earth.phobot.pathfinder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
+import me.earth.phobot.modules.client.Pathfinding;
 import me.earth.phobot.pathfinder.algorithm.AStar;
 import me.earth.phobot.pathfinder.algorithm.Algorithm;
 import me.earth.phobot.pathfinder.algorithm.pooling.PooledAStar;
@@ -15,7 +16,6 @@ import me.earth.phobot.pathfinder.util.*;
 import me.earth.phobot.services.TaskService;
 import me.earth.pingbypass.PingBypass;
 import me.earth.pingbypass.api.event.api.EventBus;
-import me.earth.pingbypass.api.setting.Setting;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -38,21 +38,27 @@ public class Pathfinder extends MovementPathfinder {
     private final AlgorithmRendererManager algorithmRendererManager;
     private final NavigationMeshManager navigationMeshManager;
     private final ExecutorService executorService;
+    private final Pathfinding configuration;
     private final TaskService taskService;
     private final PingBypass pingBypass;
     private final EventBus eventBus;
 
-    public Pathfinder(PingBypass pingBypass, EventBus eventBus, NavigationMeshManager navigationMeshManager, ExecutorService executorService, TaskService taskService,
-                      Setting<Boolean> shouldRender) {
+    public Pathfinder(PingBypass pingBypass, EventBus eventBus, NavigationMeshManager navigationMeshManager, ExecutorService executorService, TaskService taskService, Pathfinding configuration) {
         super(pingBypass);
         this.eventBus = eventBus;
         this.executorService = executorService;
-        this.algorithmRendererManager = new AlgorithmRendererManager(shouldRender);
+        this.configuration = configuration;
+        this.algorithmRendererManager = new AlgorithmRendererManager(configuration.getRenderAlgorithm());
         this.algorithmRendererManager.getListeners().forEach(this::listen);
         this.levelBoundTaskManager.getListeners().forEach(this::listen);
         this.navigationMeshManager = navigationMeshManager;
         this.taskService = taskService;
         this.pingBypass = pingBypass;
+    }
+
+    @Override
+    public int getLagTime() {
+        return configuration.getLagTime().getValue();
     }
 
     /**

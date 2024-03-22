@@ -26,6 +26,7 @@ import java.util.Set;
 public class HoleFiller extends BlockPlacingModule implements DetectsPlayerApproaching {
     private final Setting<Double> distance = precise("Distance", 2.0, 0.1, 6.0, "Distance of the target player to the hole we want to fill.");
     private final Setting<Integer> prediction = number("Prediction", 2, 1, 5, "Distance of the target player to the hole we want to fill.");
+    private final Setting<Boolean> safe = bool("Safe", false, "Only uses this module when you are safe.");
     private final SurroundService surroundService;
 
     public HoleFiller(Phobot phobot, SurroundService surroundService) {

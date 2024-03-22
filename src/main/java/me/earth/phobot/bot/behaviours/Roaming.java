@@ -40,7 +40,7 @@ public class Roaming extends Behaviour {
                 && !phobot.getPathfinder().isFollowingPath()
                 && !bot.getJumpDownFromSpawn().isAboveSpawn(player)
                 && level.players().stream().filter(p -> !bot.getJumpDownFromSpawn().isAboveSpawn(p)).noneMatch(p -> p != player)) {
-            if (player.distanceToSqr(0.0, player.getY(), 0.0) > 40_000.0 && !bot.isDueling()) { // further than 200 blocks away from spawn, why go back
+            if (player.distanceToSqr(0.0, player.getY(), 0.0) > 40_000.0 && !bot.isDueling() && bot.getSuicide().getValue()) { // further than 200 blocks away from spawn, why go back
                 bot.getModules().getSuicide().enable();
             } else {
                 Vec3 anchor = anchorPoints.stream().min(Comparator.comparingDouble(vec -> vec.distanceToSqr(player.position()))).orElse(anchorPoints.get(0));

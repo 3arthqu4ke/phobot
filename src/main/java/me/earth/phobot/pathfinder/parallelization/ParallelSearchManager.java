@@ -6,6 +6,7 @@ import me.earth.phobot.pathfinder.util.CancellableFuture;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Manages {@link ParallelPathSearch}es by multiple providers.
@@ -21,35 +22,11 @@ public class ParallelSearchManager {
      * In case confusion about java generics exists, you can define the type of the search like this:
      * <p>{@code multiPathSearchManager.<Hole>applyForPathSearch(this, holePathSearch -> ... }
      *
+     * @param provider the provider for this search.
      * @param configuration configures the MultiPathSearch to add.
      */
-    @Synchronized("lock")
-    public <T> @Nullable CancellableFuture<ParallelPathSearch.Result<T>> applyForPathSearch(HasPriority provider, Consumer<ParallelPathSearch<T>> configuration) {
-        if (isMoreImportantSearchThan(provider)) {
-            return null;
-        }
-
-        Search<?> previousSearch = this.search;
-        if (previousSearch != null) {
-            previousSearch.search.getFuture().completeExceptionally(
-                    new CancelledDueToBetterProviderException("Better provider " + provider + " has cancelled your (" + previousSearch.provider + ") search."));
-            previousSearch.search.setCancelled(true);
-        }
-
-        ParallelPathSearch<T> multiPathSearch = new ParallelPathSearch<>();
-        Search<T> search = new Search<>(multiPathSearch, provider);
-        configuration.accept(multiPathSearch);
-        multiPathSearch.allFuturesAdded();
-        this.search = search;
-        multiPathSearch.getFuture().whenComplete((r,t) -> {
-            synchronized (lock) {
-                if (this.search == search) {
-                    this.search = null;
-                }
-            }
-        });
-
-        return multiPathSearch.getFuture();
+    public <T> @Nullable CancellableFuture<CancellableSearch.Result<T>> applyForPathSearch(HasPriority provider, Consumer<ParallelPathSearch<T>> configuration) {
+        return applyForPathSearch(provider, ParallelPathSearch::new, configuration);
     }
 
     /**
@@ -99,7 +76,49 @@ public class ParallelSearchManager {
         }
     }
 
-    public record Search<T>(ParallelPathSearch<T> search, HasPriority provider) { }
+    /**
+     * Starts a new {@link CancellableSearch} if there is none in progress yet.
+     * In case confusion about java generics exists, you can define the type of the search like this:
+     * <p>{@code multiPathSearchManager.<Hole, (type of search)<Hole>>applyForPathSearch(this, factory, holePathSearch -> ... }
+     *
+     * @param provider the provider for this search.
+     * @param searchFactory the factory supplying the {@link CancellableSearch}
+     * @param configuration configures the MultiPathSearch to add.
+     */
+    @Synchronized("lock")
+    public <T, S extends CancellableSearch<T>> @Nullable CancellableFuture<CancellableSearch.Result<T>> applyForPathSearch(HasPriority provider,
+                                                                                                                           Supplier<S> searchFactory,
+                                                                                                                           Consumer<S> configuration) {
+        if (isMoreImportantSearchThan(provider)) {
+            return null;
+        }
+
+        Search<?> previousSearch = this.search;
+        if (previousSearch != null) {
+            previousSearch.search.getFuture().completeExceptionally(
+                    new CancelledDueToBetterProviderException("Better provider " + provider + " has cancelled your (" + previousSearch.provider + ") search."));
+            previousSearch.search.setCancelled(true);
+        }
+
+        S multiPathSearch = searchFactory.get();
+        synchronized (multiPathSearch.getFuture()) { // synchronize in case a future completes before this is even done, in that case some futures might run for longer
+            Search<T> search = new Search<>(multiPathSearch, provider);
+            configuration.accept(multiPathSearch);
+            multiPathSearch.allFuturesAdded();
+            this.search = search;
+            multiPathSearch.getFuture().whenComplete((r,t) -> {
+                synchronized (lock) {
+                    if (this.search == search) {
+                        this.search = null;
+                    }
+                }
+            });
+        }
+
+        return multiPathSearch.getFuture();
+    }
+
+    public record Search<T>(CancellableSearch<T> search, HasPriority provider) { }
 
     @StandardException
     public static class CancelledDueToBetterProviderException extends Exception { }

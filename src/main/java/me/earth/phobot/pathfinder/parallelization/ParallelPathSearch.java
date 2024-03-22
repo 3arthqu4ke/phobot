@@ -5,7 +5,6 @@ import me.earth.phobot.pathfinder.Pathfinder;
 import me.earth.phobot.pathfinder.algorithm.Algorithm;
 import me.earth.phobot.pathfinder.mesh.MeshNode;
 import me.earth.phobot.pathfinder.util.CancellableFuture;
-import me.earth.phobot.pathfinder.util.Cancellation;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.Map;
@@ -19,9 +18,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * @param <T> the type of key to use to index the running algorithms.
  */
 @Getter
-public class ParallelPathSearch<T> extends Cancellation {
-    private final Map<T, CancellableFuture<Algorithm.Result<MeshNode>>> futures = new ConcurrentHashMap<>();
-    private final CancellableFuture<ParallelPathSearch.Result<T>> future = new CancellableFuture<>(this);
+public class ParallelPathSearch<T> extends CancellableSearch<T> {
+    protected final Map<T, CancellableFuture<Algorithm.Result<MeshNode>>> futures = new ConcurrentHashMap<>();
 
     @Override
     public void setCancelled(boolean cancelled) {
@@ -29,6 +27,18 @@ public class ParallelPathSearch<T> extends Cancellation {
         if (cancelled) {
             futures.values().forEach(future -> future.cancel(true));
         }
+    }
+
+    @Override
+    public void allFuturesAdded() {
+        CompletableFuture<?> allFutures = CompletableFuture.allOf(futures.values().stream().distinct().toArray(CompletableFuture[]::new));
+        allFutures.whenComplete((r,t) -> {
+            synchronized (future) {
+                if (!future.isDone() && !future.isCancelled()) {
+                    future.completeExceptionally(new NoSuchElementException("None of the given futures returned a value."));
+                }
+            }
+        });
     }
 
     public void findPath(T key, Pathfinder pathfinder, Player player, MeshNode goal, boolean render) {
@@ -46,6 +56,10 @@ public class ParallelPathSearch<T> extends Cancellation {
             before.cancel(true);
         }
 
+        registerPathFutureFinishedListener(key, pathFuture);
+    }
+
+    protected void registerPathFutureFinishedListener(T key, CancellableFuture<Algorithm.Result<MeshNode>> pathFuture) {
         pathFuture.thenAccept(result -> {
             synchronized (future) {
                 if (!future.isDone() && !future.isCancelled()) {
@@ -55,18 +69,5 @@ public class ParallelPathSearch<T> extends Cancellation {
             }
         });
     }
-
-    public void allFuturesAdded() {
-        CompletableFuture<?> allFutures = CompletableFuture.allOf(futures.values().stream().distinct().toArray(CompletableFuture[]::new));
-        allFutures.whenComplete((r,t) -> {
-            synchronized (future) {
-                if (!future.isDone() && !future.isCancelled()) {
-                    future.completeExceptionally(new NoSuchElementException("None of the given futures returned a value."));
-                }
-            }
-        });
-    }
-
-    public record Result<V>(Algorithm.Result<MeshNode> algorithmResult, V key) { }
 
 }

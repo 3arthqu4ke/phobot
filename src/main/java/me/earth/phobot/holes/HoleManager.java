@@ -5,13 +5,16 @@ import me.earth.phobot.util.math.PositionUtil;
 import me.earth.phobot.util.mutables.MutPos;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Comparator;
 import java.util.Map;
+import java.util.stream.Stream;
 
 public class HoleManager extends AbstractInvalidationManager<Hole, ConfigWithMinMaxHeight> implements HoleBlocks, HoleOffsets {
     public HoleManager(ConfigWithMinMaxHeight config, Map<BlockPos, Hole> map) {
@@ -95,6 +98,14 @@ public class HoleManager extends AbstractInvalidationManager<Hole, ConfigWithMin
                 hole.invalidate();
             }
         }
+    }
+
+    public Stream<Hole> stream() {
+        return getMap().values().stream().distinct();
+    }
+
+    public Stream<Hole> holesClosestTo(Entity entity) {
+        return stream().sorted(Comparator.comparingDouble(hole -> entity.distanceToSqr(hole.getCenter())));
     }
 
 }

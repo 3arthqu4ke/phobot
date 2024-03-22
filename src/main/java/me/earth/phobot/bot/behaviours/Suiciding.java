@@ -26,11 +26,12 @@ public class Suiciding extends Behaviour {
     @Override
     protected void update(LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
         bot.getRunningAway().getRunningAwayRequests().remove(this);
-        if (bot.getJumpDownFromSpawn().isAboveSpawn(player) || bot.isDueling()) {
+        if (bot.getJumpDownFromSpawn().isAboveSpawn(player) || bot.isDueling() || !bot.getSuicide().getValue()) {
             bot.getModules().getSuicide().disable();
             suicidingDecisionMade = false;
             return;
         }
+
         // TODO: also kill after long fight!
         phobot.getInventoryService().use(ctx -> {
             if (doesNotHaveEnough(Items.END_CRYSTAL, 64, ctx)

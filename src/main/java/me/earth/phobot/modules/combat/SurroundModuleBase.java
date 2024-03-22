@@ -5,14 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import me.earth.phobot.Phobot;
 import me.earth.phobot.ducks.IEntity;
 import me.earth.phobot.event.PreMotionPlayerUpdateEvent;
-import me.earth.phobot.modules.BlockPlacingModule;
+import me.earth.phobot.modules.SwappingBlockPlacingModule;
 import me.earth.phobot.pathfinder.blocks.BlockPathfinder;
 import me.earth.phobot.services.BlockPlacer;
 import me.earth.phobot.services.SurroundService;
 import me.earth.phobot.services.inventory.InventoryContext;
 import me.earth.phobot.util.ResetUtil;
 import me.earth.phobot.util.math.PositionUtil;
-import me.earth.phobot.util.time.StopWatch;
 import me.earth.phobot.util.time.TimeUtil;
 import me.earth.pingbypass.api.event.SafeListener;
 import me.earth.pingbypass.api.event.network.PostListener;
@@ -49,12 +48,10 @@ import java.util.*;
  */
 @Slf4j
 @Getter
-public class SurroundModuleBase extends BlockPlacingModule implements FindsShortestPath, BlockPlacer.ActionListener {
+public class SurroundModuleBase extends SwappingBlockPlacingModule implements FindsShortestPath {
     private final Setting<Boolean> packetRotations = bool("PacketRotations", false, "Sends additional packets to rotate, might lag back, but allows you to place more blocks in one tick.");
     private final Setting<Integer> maxHelping = number("Helping", 0, 0, 10, "Amount of additional helping blocks to place. Mainly for StrictDirection servers.");
     private final Setting<Boolean> disable = bool("Disable", true, "Disables this module when you leave the position you enabled it on.");
-    private final Setting<Integer> swap = number("Swap", -1, -1, 2000, "Delay between swap (packet) switches in ms. Off if -1.");
-    private final StopWatch.ForMultipleThreads swapTimer = new StopWatch.ForMultipleThreads();
     private final BlockPathfinder blockPathfinder = new BlockPathfinder();
 
     protected volatile Set<BlockPos> currentPositions = new HashSet<>();
@@ -95,13 +92,6 @@ public class SurroundModuleBase extends BlockPlacingModule implements FindsShort
     }
 
     @Override
-    public void onActionExecutedSuccessfully(BlockPlacer.Action action) {
-        if (!action.isUsingSetCarried()) {
-            swapTimer.reset();
-        }
-    }
-
-    @Override
     protected void onEnable() {
         LocalPlayer player = mc.player;
         if (player != null) {
@@ -121,12 +111,6 @@ public class SurroundModuleBase extends BlockPlacingModule implements FindsShort
     }
 
     @Override
-    public boolean isUsingSetCarriedItem() {
-        int swap = this.swap.getValue();
-        return swap == -1 || swap != 0 && !swapTimer.passed(swap);
-    }
-
-    @Override
     public boolean isDamageAcceptable(Player player, float damage) {
         return super.isDamageAcceptable(player, damage) || player.isHolding(Items.TOTEM_OF_UNDYING); // we are going to pop anyway
     }
@@ -139,7 +123,7 @@ public class SurroundModuleBase extends BlockPlacingModule implements FindsShort
     /**
      * Returns all positions around the given player that are needed for Surround and places them if configured.
      * WARNING: this also returns all supporting positions.
-     * If you want to check if a player is surrounded see how {@link SurroundService#isSurrounded(Player)} does it.
+     * If you want to check if a player is surrounded see how {@link SurroundService#isSurrounded(Entity)} does it.
      *
      * @param surroundPlayer the player to get the surrounding blocks for.
      * @param placePlayer the player to use for placing. (rotation checks etc.)
@@ -147,16 +131,16 @@ public class SurroundModuleBase extends BlockPlacingModule implements FindsShort
      * @param block the block to use, e.g. {@link Blocks#ENDER_CHEST} or {@link Blocks#OBSIDIAN}.
      * @param place whether to place the missing blocks or not.
      * @return all positions around us that are needed to surround the given player + supporting blocks.
-     * @see #getAllSurroundingPositions(Player, Player, ClientLevel, Block, boolean, PlaceFunction, boolean)
+     * @see #getAllSurroundingPositions(Entity, Player, ClientLevel, Block, boolean, PlaceFunction, boolean)
      */
-    public Set<BlockPos> getAllSurroundingPositions(Player surroundPlayer, Player placePlayer, ClientLevel level, Block block, boolean place) {
+    public Set<BlockPos> getAllSurroundingPositions(Entity surroundPlayer, Player placePlayer, ClientLevel level, Block block, boolean place) {
         return getAllSurroundingPositions(surroundPlayer, placePlayer, level, block, place, this::placePos, false);
     }
 
     /**
      * Returns all positions around the given player that are needed for Surround and places them if configured.
      * WARNING: this also returns all supporting positions.
-     * If you want to check if a player is surrounded see how {@link SurroundService#isSurrounded(Player)} does it.
+     * If you want to check if a player is surrounded see how {@link SurroundService#isSurrounded(Entity)} does it.
      *
      * @param surroundPlayer the player to get the surrounding blocks for.
      * @param placePlayer the player to use for placing. (rotation checks etc.)
@@ -167,7 +151,7 @@ public class SurroundModuleBase extends BlockPlacingModule implements FindsShort
      * @param returnAfterFirstPlace this functions returns after the first successful call to the given placeFunction.
      * @return all positions around us that are needed to surround the given player + supporting blocks.
      */
-    protected Set<BlockPos> getAllSurroundingPositions(Player surroundPlayer, Player placePlayer, ClientLevel level, Block block,
+    protected Set<BlockPos> getAllSurroundingPositions(Entity surroundPlayer, Player placePlayer, ClientLevel level, Block block,
                                                        boolean place, PlaceFunction placeFunction, boolean returnAfterFirstPlace) {
         // Entities that have blocked our surround and that we have extended around
         Set<Entity> checkedEntities = new HashSet<>();

@@ -43,7 +43,7 @@ public class AutoEchest extends BlockPlacingModule {
     @Override
     protected void updatePlacements(InventoryContext context, LocalPlayer player, ClientLevel level, MultiPlayerGameMode gameMode) {
         if (!speedmine.isEnabled()) {
-            getPingBypass().getChat().send(Component.literal("Speedmine needs to be enabled for AutoEchest!").withStyle(ChatFormatting.RED), "SpeedmineCheck");
+            getPingBypass().getChat().sendWithoutLogging(Component.literal("Speedmine needs to be enabled for AutoEchest!").withStyle(ChatFormatting.RED), "SpeedmineCheck");
             return;
         }
 

@@ -153,9 +153,6 @@
   "Packets": {
     "Bind": []
   },
-  "PacketSpam": {
-    "Bind": []
-  },
   "Pathfinding": {
     "Bind": []
   },

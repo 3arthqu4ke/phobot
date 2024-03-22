@@ -46,7 +46,7 @@ public class AutoMine extends PhobotModule {
             @Override
             public void onEvent(PostMotionPlayerUpdateEvent event, LocalPlayer player, ClientLevel clientLevel, MultiPlayerGameMode gameMode) {
                 if (!speedmine.isEnabled()) {
-                    getPingBypass().getChat().send(Component.literal("Speedmine needs to be enabled for AutoMine!").withStyle(ChatFormatting.RED), "SpeedmineCheck");
+                    getPingBypass().getChat().sendWithoutLogging(Component.literal("Speedmine needs to be enabled for AutoMine!").withStyle(ChatFormatting.RED), "SpeedmineCheck");
                     return;
                 }
 

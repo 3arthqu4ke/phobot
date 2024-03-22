@@ -10,6 +10,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
 
@@ -19,6 +20,7 @@ import java.util.Set;
 // TODO: take blocks underneath us into account?
 @Getter
 public class SurroundService extends SubscriberImpl {
+    // TODO: could this work questionably because of ghost blocks that we place on the client side?
     private final StopWatch.ForMultipleThreads lastSafe = new StopWatch.ForMultipleThreads();
     private final Surround surround;
     private Set<BlockPos> positions = new HashSet<>();
@@ -37,7 +39,7 @@ public class SurroundService extends SubscriberImpl {
         });
     }
 
-    public boolean isSurrounded(Player player) {
+    public boolean isSurrounded(Entity player) {
         LocalPlayer localPlayer = surround.getPingBypass().getMinecraft().player;
         if (localPlayer == null) {
             return false;

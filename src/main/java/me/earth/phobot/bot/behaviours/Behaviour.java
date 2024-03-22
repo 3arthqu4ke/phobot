@@ -23,6 +23,7 @@ public abstract class Behaviour extends SubscriberImpl implements HasPriority {
     public static final int PRIORITY_TARGET = -2;
     public static final int PRIORITY_SUICIDE = -3;
     public static final int PRIORITY_MINE_AND_REPAIR = -4;
+    // TODO: get into safe hole?
     public static final int PRIORITY_RUN_AWAY = -5;
     public static final int PRIORITY_ESCAPE = -6;
     public static final int PRIORITY_CHASE = -7;
